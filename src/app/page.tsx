@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, Download, Loader2, CaseSensitive, Link as LinkIcon, FileText, CheckCircle2 } from 'lucide-react';
+import { Upload, Download, Loader2, CaseSensitive, Link as LinkIcon, FileText, CheckCircle2, Image as ImageIcon } from 'lucide-react';
 import Papa from 'papaparse';
 import { TemplatePreview } from '@/components/template-preview';
 import { useToast } from "@/hooks/use-toast"
@@ -15,6 +15,7 @@ export default function TemplateEditorPage() {
   const [originalHtml, setOriginalHtml] = useState('');
   const [modifiedHtml, setModifiedHtml] = useState('');
   
+  const [tournamentImageUrl, setTournamentImageUrl] = useState<string>('https://blog.tycko.cz/wp-content/uploads/2025/08/IMG-4082-mala-1631794192-medium.jpeg');
   const [partnerLogoUrl, setPartnerLogoUrl] = useState<string>('https://blog.tycko.cz/wp-content/uploads/2025/08/golf-plan.png');
   const [startListData, setStartListData] = useState<string[][] | null>(null);
   const [mainHeading, setMainHeading] = useState('Týčko tour Golf Park Slapy Svatý Jan');
@@ -51,6 +52,11 @@ export default function TemplateEditorPage() {
     const headingElement = doc.querySelector('h1');
     if (headingElement) {
         headingElement.textContent = mainHeading;
+    }
+
+    const tournamentImage = doc.querySelector('img[alt="Týčko tour Golf Park Slapy Svatý Jan"]');
+    if (tournamentImage && tournamentImageUrl) {
+      tournamentImage.setAttribute('src', tournamentImageUrl);
     }
     
     const partnerSection = Array.from(doc.querySelectorAll('td')).find(td => td.textContent?.trim() === 'Partner turnaje');
@@ -108,14 +114,14 @@ export default function TemplateEditorPage() {
     const newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(doc.documentElement);
     setModifiedHtml(newHtml);
     setIsProcessing(false);
-  }, [originalHtml, startListData, mainHeading, partnerLogoUrl]);
+  }, [originalHtml, startListData, mainHeading, partnerLogoUrl, tournamentImageUrl]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
         updateTemplate();
     }, 500); // Debounce updates
     return () => clearTimeout(handler);
-  }, [startListData, mainHeading, partnerLogoUrl, updateTemplate]);
+  }, [startListData, mainHeading, partnerLogoUrl, tournamentImageUrl, updateTemplate]);
 
 
   const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -161,8 +167,7 @@ export default function TemplateEditorPage() {
   return (
     <div className="container mx-auto p-4 md:p-8 bg-background font-body">
       <header className="text-center mb-8">
-        <h1 className="text-4xl font-headline font-bold text-primary">Týčko Template Editor</h1>
-        <p className="text-muted-foreground mt-2">Jednoduchý nástroj pro úpravu emailové šablony Týčko Tour.</p>
+        <h1 className="text-4xl font-headline font-bold text-primary">Týčkotour startovní listina editor</h1>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -177,6 +182,16 @@ export default function TemplateEditorPage() {
             </CardContent>
           </Card>
           
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><ImageIcon className="text-primary"/>Odkaz na obrázek turnaje</CardTitle>
+              <CardDescription>Vložte odkaz na hlavní obrázek.</CardDescription>
+            </CardHeader>
+            <CardContent>
+               <Input type="url" placeholder="https://..." value={tournamentImageUrl} onChange={(e) => setTournamentImageUrl(e.target.value)} />
+            </CardContent>
+          </Card>
+
           <Card className="shadow-md">
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><LinkIcon className="text-primary"/>Odkaz na logo partnera</CardTitle>
