@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, Download, Loader2, CaseSensitive, Link as LinkIcon, FileText, CheckCircle2, Image as ImageIcon, EyeOff, Eye } from 'lucide-react';
+import { Upload, Download, Loader2, CaseSensitive, Link as LinkIcon, FileText, CheckCircle2, Image as ImageIcon } from 'lucide-react';
 import Papa from 'papaparse';
 import { TemplatePreview } from '@/components/template-preview';
 import { useToast } from "@/hooks/use-toast"
@@ -18,6 +18,7 @@ export default function TemplateEditorPage() {
   
   const [tournamentImageUrl, setTournamentImageUrl] = useState<string>('https://blog.tycko.cz/wp-content/uploads/2025/08/IMG-4082-mala-1631794192-medium.jpeg');
   const [partnerLogoUrl, setPartnerLogoUrl] = useState<string>('https://blog.tycko.cz/wp-content/uploads/2025/08/golf-plan.png');
+  const [partnerLinkUrl, setPartnerLinkUrl] = useState<string>('https://www.golfplan.cz');
   const [showPartnerSection, setShowPartnerSection] = useState(true);
   const [startListData, setStartListData] = useState<string[][] | null>(null);
   const [mainHeading, setMainHeading] = useState('Týčko tour Golf Park Slapy Svatý Jan');
@@ -64,16 +65,39 @@ export default function TemplateEditorPage() {
     const partnerP = Array.from(doc.querySelectorAll('p')).find(p => p.textContent?.trim() === 'Partner turnaje');
     if (partnerP) {
         const partnerSectionTd = partnerP.closest('td[align="center"]');
-        const partnerRow = partnerSectionTd?.parentElement;
-        if (partnerRow) {
-            if (showPartnerSection) {
-                partnerRow.style.display = '';
-                const partnerLogoImg = partnerRow.querySelector('img[alt="Partner Logo"]');
-                if (partnerLogoUrl && partnerLogoImg) {
-                    partnerLogoImg.setAttribute('src', partnerLogoUrl);
+        if (partnerSectionTd) {
+            const partnerRow = partnerSectionTd.parentElement;
+            if (partnerRow) {
+                if (showPartnerSection) {
+                    partnerRow.style.display = '';
+                    const partnerLogoImg = partnerRow.querySelector('img[alt="Partner Logo"]');
+                    if (partnerLogoUrl && partnerLogoImg) {
+                        partnerLogoImg.setAttribute('src', partnerLogoUrl);
+
+                        let link = partnerLogoImg.parentElement;
+                        if (link && link.tagName.toLowerCase() !== 'a') {
+                            link = null;
+                        }
+
+                        if (partnerLinkUrl) {
+                            if (link) {
+                                link.setAttribute('href', partnerLinkUrl);
+                            } else {
+                                const newLink = doc.createElement('a');
+                                newLink.setAttribute('href', partnerLinkUrl);
+                                newLink.setAttribute('target', '_blank');
+                                partnerLogoImg.replaceWith(newLink);
+                                newLink.appendChild(partnerLogoImg);
+                            }
+                        } else {
+                            if (link) {
+                                (link as HTMLElement).replaceWith(partnerLogoImg);
+                            }
+                        }
+                    }
+                } else {
+                    partnerRow.style.display = 'none';
                 }
-            } else {
-                partnerRow.style.display = 'none';
             }
         }
     }
@@ -115,7 +139,7 @@ export default function TemplateEditorPage() {
     const newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(doc.documentElement);
     setModifiedHtml(newHtml);
     setIsProcessing(false);
-  }, [originalHtml, startListData, mainHeading, tournamentImageUrl, partnerLogoUrl, showPartnerSection]);
+  }, [originalHtml, startListData, mainHeading, tournamentImageUrl, partnerLogoUrl, showPartnerSection, partnerLinkUrl]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -212,6 +236,10 @@ export default function TemplateEditorPage() {
                     <div>
                         <Label htmlFor="partner-logo-url">Odkaz na logo partnera</Label>
                         <Input id="partner-logo-url" type="url" placeholder="https://..." value={partnerLogoUrl} onChange={(e) => setPartnerLogoUrl(e.target.value)} />
+                    </div>
+                     <div>
+                        <Label htmlFor="partner-link-url">Odkaz pro proklik loga partnera</Label>
+                        <Input id="partner-link-url" type="url" placeholder="https://..." value={partnerLinkUrl} onChange={(e) => setPartnerLinkUrl(e.target.value)} />
                     </div>
                 </CardContent>
             )}
