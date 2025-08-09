@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, Download, Loader2, Image as ImageIcon, FileText, CheckCircle2, CaseSensitive } from 'lucide-react';
+import { Upload, Download, Loader2, Image as ImageIcon, FileText, CheckCircle2, CaseSensitive, Link as LinkIcon } from 'lucide-react';
 import Papa from 'papaparse';
 import { TemplatePreview } from '@/components/template-preview';
 import { useToast } from "@/hooks/use-toast"
@@ -15,18 +15,15 @@ export default function TemplateEditorPage() {
   const { toast } = useToast();
   const [originalHtml, setOriginalHtml] = useState('');
   const [modifiedHtml, setModifiedHtml] = useState('');
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [partnerLogo, setPartnerLogo] = useState<string | null>('https://blog.tycko.cz/wp-content/uploads/2025/08/golf-plan.png');
+  
+  const [tournamentImageUrl, setTournamentImageUrl] = useState<string>('');
+  const [partnerLogoUrl, setPartnerLogoUrl] = useState<string>('https://blog.tycko.cz/wp-content/uploads/2025/08/golf-plan.png');
   const [startListData, setStartListData] = useState<string[][] | null>(null);
   const [mainHeading, setMainHeading] = useState('Týčko tour Golf Park Slapy Svatý Jan');
   
   const [isProcessing, setIsProcessing] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [partnerLogoFile, setPartnerLogoFile] = useState<File | null>(null);
   const [csvFile, setCsvFile] = useState<File | null>(null);
 
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const partnerLogoInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -58,28 +55,34 @@ export default function TemplateEditorPage() {
         headingElement.textContent = mainHeading;
     }
 
-    if (uploadedImage) {
+    if (tournamentImageUrl) {
       const imgElement = doc.querySelector('img[alt="Týčko tour Golf Park Slapy Svatý Jan"]');
       if (imgElement) {
-        imgElement.setAttribute('src', uploadedImage);
+        imgElement.setAttribute('src', tournamentImageUrl);
       }
     }
     
-    if (partnerLogo) {
-      const partnerLogoImg = doc.querySelector('img[alt="Partner logo"]');
-      if(partnerLogoImg) {
-        partnerLogoImg.setAttribute('src', partnerLogo);
-      }
-    } else {
-        const partnerLogoImg = doc.querySelector('img[alt="Partner logo"]');
-        if (partnerLogoImg) {
-            const parentTable = partnerLogoImg.closest('table');
-            if (parentTable) {
-                parentTable.remove();
+    const partnerTdElements = Array.from(doc.querySelectorAll('td'));
+    const partnerTextTd = partnerTdElements.find(td => td.textContent?.trim().includes('Partner turnaje'));
+
+    if (partnerTextTd) {
+        const parentTr = partnerTextTd.closest('tr');
+        if (parentTr) {
+            const logoTd = parentTr.querySelector('td:last-child');
+            if (logoTd) {
+                const partnerLogoImg = logoTd.querySelector('img');
+                if (partnerLogoUrl && partnerLogoImg) {
+                    partnerLogoImg.setAttribute('src', partnerLogoUrl);
+                    partnerLogoImg.style.display = '';
+                    parentTr.style.display = '';
+                } else if (partnerLogoImg) {
+                    // Hide the entire row if URL is empty
+                    parentTr.style.display = 'none';
+                }
             }
         }
     }
-
+    
     if (startListData) {
         const thElements = Array.from(doc.querySelectorAll('th'));
         const timeHeader = thElements.find(th => th.textContent?.trim() === 'Čas');
@@ -117,51 +120,15 @@ export default function TemplateEditorPage() {
     const newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(doc.documentElement);
     setModifiedHtml(newHtml);
     setIsProcessing(false);
-  }, [originalHtml, uploadedImage, startListData, mainHeading, partnerLogo]);
+  }, [originalHtml, tournamentImageUrl, startListData, mainHeading, partnerLogoUrl]);
 
   useEffect(() => {
-    updateTemplate();
-  }, [uploadedImage, startListData, mainHeading, partnerLogo, updateTemplate]);
+    const handler = setTimeout(() => {
+        updateTemplate();
+    }, 500); // Debounce updates
+    return () => clearTimeout(handler);
+  }, [tournamentImageUrl, startListData, mainHeading, partnerLogoUrl, updateTemplate]);
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        toast({
-            variant: "destructive",
-            title: "Chyba",
-            description: "Prosím, nahrajte platný obrázkový soubor.",
-          });
-        return;
-      }
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setUploadedImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handlePartnerLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        toast({
-            variant: "destructive",
-            title: "Chyba",
-            description: "Prosím, nahrajte platný obrázkový soubor.",
-          });
-        return;
-      }
-      setPartnerLogoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPartnerLogo(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -224,29 +191,21 @@ export default function TemplateEditorPage() {
 
           <Card className="shadow-md">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><ImageIcon className="text-primary"/>Nahrát obrázek turnaje</CardTitle>
-              <CardDescription>Vyměňte hlavní obrázek v šabloně.</CardDescription>
+              <CardTitle className="flex items-center gap-2"><LinkIcon className="text-primary"/>Odkaz na obrázek turnaje</CardTitle>
+              <CardDescription>Vložte odkaz na hlavní obrázek.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Input type="file" accept="image/*" onChange={handleImageUpload} ref={imageInputRef} className="hidden" id="image-upload" />
-              <Button onClick={() => imageInputRef.current?.click()} className="w-full">
-                <Upload className="mr-2 h-4 w-4" /> Vybrat obrázek
-              </Button>
-              {imageFile && <div className="mt-4 text-sm text-muted-foreground flex items-center gap-2 p-2 bg-secondary rounded-md"><CheckCircle2 className="text-green-500"/><span>{imageFile.name}</span></div>}
+              <Input type="url" placeholder="https://..." value={tournamentImageUrl} onChange={(e) => setTournamentImageUrl(e.target.value)} />
             </CardContent>
           </Card>
           
           <Card className="shadow-md">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><ImageIcon className="text-primary"/>Nahrát logo partnera</CardTitle>
-              <CardDescription>Přidejte logo partnera do šablony. Ponechte prázdné pro odstranění.</CardDescription>
+              <CardTitle className="flex items-center gap-2"><LinkIcon className="text-primary"/>Odkaz na logo partnera</CardTitle>
+              <CardDescription>Vložte odkaz na logo partnera. Ponechte prázdné pro odstranění.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Input type="file" accept="image/*" onChange={handlePartnerLogoUpload} ref={partnerLogoInputRef} className="hidden" id="partner-logo-upload" />
-              <Button onClick={() => partnerLogoInputRef.current?.click()} className="w-full">
-                <Upload className="mr-2 h-4 w-4" /> Vybrat logo
-              </Button>
-              {partnerLogoFile && <div className="mt-4 text-sm text-muted-foreground flex items-center gap-2 p-2 bg-secondary rounded-md"><CheckCircle2 className="text-green-500"/><span>{partnerLogoFile.name}</span></div>}
+               <Input type="url" placeholder="https://..." value={partnerLogoUrl} onChange={(e) => setPartnerLogoUrl(e.target.value)} />
             </CardContent>
           </Card>
 
@@ -264,7 +223,7 @@ export default function TemplateEditorPage() {
             </CardContent>
           </Card>
           
-          <Button onClick={handleDownload} size="lg" className="w-full font-bold" disabled={isProcessing}>
+          <Button onClick={handleDownload} size="lg" className="w-full font-bold" disabled={isProcessing || !modifiedHtml}>
             {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
             Stáhnout upravenou šablonu
           </Button>
@@ -277,5 +236,3 @@ export default function TemplateEditorPage() {
     </div>
   );
 }
-
-    
