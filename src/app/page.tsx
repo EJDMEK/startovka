@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -6,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, Download, Loader2, Image as ImageIcon, FileText, CheckCircle2, CaseSensitive, Link as LinkIcon } from 'lucide-react';
+import { Upload, Download, Loader2, CaseSensitive, Link as LinkIcon, FileText, CheckCircle2 } from 'lucide-react';
 import Papa from 'papaparse';
 import { TemplatePreview } from '@/components/template-preview';
 import { useToast } from "@/hooks/use-toast"
@@ -54,27 +53,19 @@ export default function TemplateEditorPage() {
         headingElement.textContent = mainHeading;
     }
     
-    // Set static tycko tour logo
-    const tourLogoImg = doc.querySelector('img[src="https://www.tyckotour.cz/"]');
-    if (tourLogoImg) {
-      tourLogoImg.setAttribute('src', 'https://www.tyckotour.cz/');
-    }
-
-    const partnerTdElements = Array.from(doc.querySelectorAll('td'));
-    const partnerTextTd = partnerTdElements.find(td => td.textContent?.trim().toLowerCase().includes('partner turnaje'));
-    
-    if (partnerTextTd) {
-        const parentTr = partnerTextTd.closest('tr');
-        if (parentTr) {
-            const logoTd = parentTr.querySelector('td:last-child');
+    const partnerSection = Array.from(doc.querySelectorAll('td')).find(td => td.textContent?.trim() === 'Partner turnaje');
+    if (partnerSection) {
+        const partnerRow = partnerSection.closest('tr');
+        if (partnerRow) {
+            const logoTd = partnerRow.querySelector('td:last-child');
             if (logoTd) {
                 const partnerLogoImg = logoTd.querySelector('img');
                 if (partnerLogoUrl && partnerLogoImg) {
                     partnerLogoImg.setAttribute('src', partnerLogoUrl);
                     partnerLogoImg.style.display = '';
-                    parentTr.style.display = '';
+                    if (partnerRow.parentElement) partnerRow.parentElement.closest('tr')!.style.display = '';
                 } else if (partnerLogoImg) {
-                    parentTr.style.display = 'none';
+                   if (partnerRow.parentElement) partnerRow.parentElement.closest('tr')!.style.display = 'none';
                 }
             }
         }
