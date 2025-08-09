@@ -63,8 +63,8 @@ export default function TemplateEditorPage() {
     }
     
     const partnerTdElements = Array.from(doc.querySelectorAll('td'));
-    const partnerTextTd = partnerTdElements.find(td => td.textContent?.trim().includes('Partner turnaje'));
-
+    const partnerTextTd = partnerTdElements.find(td => td.textContent?.trim().toLowerCase().includes('partner turnaje'));
+    
     if (partnerTextTd) {
         const parentTr = partnerTextTd.closest('tr');
         if (parentTr) {
@@ -76,7 +76,6 @@ export default function TemplateEditorPage() {
                     partnerLogoImg.style.display = '';
                     parentTr.style.display = '';
                 } else if (partnerLogoImg) {
-                    // Hide the entire row if URL is empty
                     parentTr.style.display = 'none';
                 }
             }
