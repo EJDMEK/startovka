@@ -15,7 +15,7 @@ export default function TemplateEditorPage() {
   const [originalHtml, setOriginalHtml] = useState('');
   const [modifiedHtml, setModifiedHtml] = useState('');
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [partnerLogo, setPartnerLogo] = useState<string | null>(null);
+  const [partnerLogo, setPartnerLogo] = useState<string | null>('https://blog.tycko.cz/wp-content/uploads/2025/08/golf-plan.png');
   const [startListData, setStartListData] = useState<string[][] | null>(null);
   const [mainHeading, setMainHeading] = useState('Týčko tour Golf Park Slapy Svatý Jan');
   
