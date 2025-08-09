@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -64,19 +65,23 @@ export default function TemplateEditorPage() {
     }
     
     if (partnerLogo) {
-      let partnerLogoImg = doc.querySelector('img[alt="Partner logo"]');
-      if (!partnerLogoImg) {
-        const heading = doc.querySelector('h1');
-        if (heading) {
-            partnerLogoImg = doc.createElement('img');
-            partnerLogoImg.setAttribute('alt', 'Partner logo');
-            partnerLogoImg.setAttribute('style', 'max-width: 150px; max-height: 80px; margin: 10px auto; display: block;');
-            heading.parentNode?.insertBefore(partnerLogoImg, heading.nextSibling);
-        }
-      }
+      const partnerLogoImg = doc.querySelector('img[alt="Partner logo"]');
       if(partnerLogoImg) {
         partnerLogoImg.setAttribute('src', partnerLogo);
       }
+    } else {
+        const partnerLogoImg = doc.querySelector('img[alt="Partner logo"]');
+        if (partnerLogoImg) {
+            const parent = partnerLogoImg.parentNode;
+            if(parent) {
+                // Also remove the "Partner turnaje" text, which is the previous sibling
+                const partnerTextNode = parent.previousSibling;
+                if(partnerTextNode && partnerTextNode.nodeType === Node.TEXT_NODE && partnerTextNode.textContent?.trim() === "Partner turnaje") {
+                    partnerTextNode.remove();
+                }
+                parent.remove();
+            }
+        }
     }
 
     if (startListData) {
@@ -238,7 +243,7 @@ export default function TemplateEditorPage() {
           <Card className="shadow-md">
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><ImageIcon className="text-primary"/>Nahrát logo partnera</CardTitle>
-              <CardDescription>Přidejte logo partnera do šablony.</CardDescription>
+              <CardDescription>Přidejte logo partnera do šablony. Ponechte prázdné pro odstranění.</CardDescription>
             </CardHeader>
             <CardContent>
               <Input type="file" accept="image/*" onChange={handlePartnerLogoUpload} ref={partnerLogoInputRef} className="hidden" id="partner-logo-upload" />
