@@ -2,24 +2,55 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useRef, useEffect } from "react";
 
 interface TemplatePreviewProps {
   htmlContent: string;
 }
 
 export function TemplatePreview({ htmlContent }: TemplatePreviewProps) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (iframe) {
+      const handleLoad = () => {
+        if (iframe.contentWindow) {
+          const body = iframe.contentWindow.document.body;
+          const html = iframe.contentWindow.document.documentElement;
+          const height = Math.max(
+            body.scrollHeight,
+            body.offsetHeight,
+            html.clientHeight,
+            html.scrollHeight,
+            html.offsetHeight
+          );
+          iframe.style.height = `${height}px`;
+        }
+      };
+      iframe.addEventListener('load', handleLoad);
+      handleLoad();
+      return () => {
+        iframe.removeEventListener('load', handleLoad);
+      };
+    }
+  }, [htmlContent]);
+
+
   return (
     <Card className="shadow-md h-full">
       <CardHeader>
         <CardTitle>Náhled šablony</CardTitle>
       </CardHeader>
-      <CardContent className="h-[max(80vh,800px)] p-2 sm:p-6">
+      <CardContent className="p-2 sm:p-6">
         {htmlContent ? (
           <iframe
+            ref={iframeRef}
             srcDoc={htmlContent}
             title="Template Preview"
-            className="w-full h-full border rounded-md bg-white"
+            className="w-full border rounded-md bg-white"
             sandbox="allow-same-origin"
+            scrolling="no"
           />
         ) : (
           <div className="w-full h-full border rounded-md bg-white p-4">
