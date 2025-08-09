@@ -49,8 +49,9 @@ export default function TemplateEditorPage() {
     if (!originalHtml) return;
     setIsProcessing(true);
 
+    let currentHtml = originalHtml;
     const parser = new DOMParser();
-    const doc = parser.parseFromString(originalHtml, 'text/html');
+    const doc = parser.parseFromString(currentHtml, 'text/html');
     
     const headingElement = doc.querySelector('h1');
     if (headingElement) {
@@ -72,14 +73,9 @@ export default function TemplateEditorPage() {
     } else {
         const partnerLogoImg = doc.querySelector('img[alt="Partner logo"]');
         if (partnerLogoImg) {
-            const parent = partnerLogoImg.parentNode;
-            if(parent) {
-                // Also remove the "Partner turnaje" text, which is the previous sibling
-                const partnerTextNode = parent.previousSibling;
-                if(partnerTextNode && partnerTextNode.nodeType === Node.TEXT_NODE && partnerTextNode.textContent?.trim() === "Partner turnaje") {
-                    partnerTextNode.remove();
-                }
-                parent.remove();
+            const parentTable = partnerLogoImg.closest('table');
+            if (parentTable) {
+                parentTable.remove();
             }
         }
     }
