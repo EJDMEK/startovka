@@ -5,10 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, Download, Loader2, CaseSensitive, Link as LinkIcon, FileText, CheckCircle2, Image as ImageIcon } from 'lucide-react';
+import { Upload, Download, Loader2, CaseSensitive, Link as LinkIcon, FileText, CheckCircle2, Image as ImageIcon, EyeOff, Eye } from 'lucide-react';
 import Papa from 'papaparse';
 import { TemplatePreview } from '@/components/template-preview';
 import { useToast } from "@/hooks/use-toast"
+import { Switch } from '@/components/ui/switch';
 
 export default function TemplateEditorPage() {
   const { toast } = useToast();
@@ -17,6 +18,7 @@ export default function TemplateEditorPage() {
   
   const [tournamentImageUrl, setTournamentImageUrl] = useState<string>('https://blog.tycko.cz/wp-content/uploads/2025/08/IMG-4082-mala-1631794192-medium.jpeg');
   const [partnerLogoUrl, setPartnerLogoUrl] = useState<string>('https://blog.tycko.cz/wp-content/uploads/2025/08/golf-plan.png');
+  const [showPartnerSection, setShowPartnerSection] = useState(true);
   const [startListData, setStartListData] = useState<string[][] | null>(null);
   const [mainHeading, setMainHeading] = useState('Týčko tour Golf Park Slapy Svatý Jan');
   
@@ -59,20 +61,19 @@ export default function TemplateEditorPage() {
       tournamentImage.setAttribute('src', tournamentImageUrl);
     }
     
-    const partnerSection = Array.from(doc.querySelectorAll('td')).find(td => td.textContent?.trim() === 'Partner turnaje');
-    if (partnerSection) {
-        const partnerRow = partnerSection.closest('tr');
+    const partnerP = Array.from(doc.querySelectorAll('p')).find(p => p.textContent?.trim() === 'Partner turnaje');
+    if (partnerP) {
+        const partnerSectionTd = partnerP.closest('td[align="center"]');
+        const partnerRow = partnerSectionTd?.parentElement;
         if (partnerRow) {
-            const logoTd = partnerRow.querySelector('td:last-child');
-            if (logoTd) {
-                const partnerLogoImg = logoTd.querySelector('img');
+            if (showPartnerSection) {
+                partnerRow.style.display = '';
+                const partnerLogoImg = partnerRow.querySelector('img[alt="Partner Logo"]');
                 if (partnerLogoUrl && partnerLogoImg) {
                     partnerLogoImg.setAttribute('src', partnerLogoUrl);
-                    partnerLogoImg.style.display = '';
-                    if (partnerRow.parentElement) partnerRow.parentElement.closest('tr')!.style.display = '';
-                } else if (partnerLogoImg) {
-                   if (partnerRow.parentElement) partnerRow.parentElement.closest('tr')!.style.display = 'none';
                 }
+            } else {
+                partnerRow.style.display = 'none';
             }
         }
     }
@@ -114,14 +115,14 @@ export default function TemplateEditorPage() {
     const newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(doc.documentElement);
     setModifiedHtml(newHtml);
     setIsProcessing(false);
-  }, [originalHtml, startListData, mainHeading, partnerLogoUrl, tournamentImageUrl]);
+  }, [originalHtml, startListData, mainHeading, tournamentImageUrl, partnerLogoUrl, showPartnerSection]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
         updateTemplate();
     }, 500); // Debounce updates
     return () => clearTimeout(handler);
-  }, [startListData, mainHeading, partnerLogoUrl, tournamentImageUrl, updateTemplate]);
+  }, [updateTemplate]);
 
 
   const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -194,12 +195,26 @@ export default function TemplateEditorPage() {
 
           <Card className="shadow-md">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><LinkIcon className="text-primary"/>Odkaz na logo partnera</CardTitle>
-              <CardDescription>Vložte odkaz na logo partnera. Ponechte prázdné pro odstranění.</CardDescription>
+                <div className="flex justify-between items-start">
+                    <div>
+                        <CardTitle className="flex items-center gap-2"><LinkIcon className="text-primary"/>Sekce partnera</CardTitle>
+                        <CardDescription>Upravte nebo skryjte sekci partnera.</CardDescription>
+                    </div>
+                    <Switch
+                        checked={showPartnerSection}
+                        onCheckedChange={setShowPartnerSection}
+                        aria-label="Zobrazit sekci partnera"
+                    />
+                </div>
             </CardHeader>
-            <CardContent>
-               <Input type="url" placeholder="https://..." value={partnerLogoUrl} onChange={(e) => setPartnerLogoUrl(e.target.value)} />
-            </CardContent>
+            {showPartnerSection && (
+                <CardContent className="space-y-4">
+                    <div>
+                        <Label htmlFor="partner-logo-url">Odkaz na logo partnera</Label>
+                        <Input id="partner-logo-url" type="url" placeholder="https://..." value={partnerLogoUrl} onChange={(e) => setPartnerLogoUrl(e.target.value)} />
+                    </div>
+                </CardContent>
+            )}
           </Card>
 
           <Card className="shadow-md">
