@@ -16,7 +16,6 @@ export default function TemplateEditorPage() {
   const [originalHtml, setOriginalHtml] = useState('');
   const [modifiedHtml, setModifiedHtml] = useState('');
   
-  const [tournamentImageUrl, setTournamentImageUrl] = useState<string>('');
   const [partnerLogoUrl, setPartnerLogoUrl] = useState<string>('https://blog.tycko.cz/wp-content/uploads/2025/08/golf-plan.png');
   const [startListData, setStartListData] = useState<string[][] | null>(null);
   const [mainHeading, setMainHeading] = useState('Týčko tour Golf Park Slapy Svatý Jan');
@@ -54,14 +53,13 @@ export default function TemplateEditorPage() {
     if (headingElement) {
         headingElement.textContent = mainHeading;
     }
-
-    if (tournamentImageUrl) {
-      const imgElement = doc.querySelector('img[alt="Týčko tour Golf Park Slapy Svatý Jan"]');
-      if (imgElement) {
-        imgElement.setAttribute('src', tournamentImageUrl);
-      }
-    }
     
+    // Set static tycko tour logo
+    const tourLogoImg = doc.querySelector('img[src="https://www.tyckotour.cz/"]');
+    if (tourLogoImg) {
+      tourLogoImg.setAttribute('src', 'https://www.tyckotour.cz/');
+    }
+
     const partnerTdElements = Array.from(doc.querySelectorAll('td'));
     const partnerTextTd = partnerTdElements.find(td => td.textContent?.trim().toLowerCase().includes('partner turnaje'));
     
@@ -119,14 +117,14 @@ export default function TemplateEditorPage() {
     const newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(doc.documentElement);
     setModifiedHtml(newHtml);
     setIsProcessing(false);
-  }, [originalHtml, tournamentImageUrl, startListData, mainHeading, partnerLogoUrl]);
+  }, [originalHtml, startListData, mainHeading, partnerLogoUrl]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
         updateTemplate();
     }, 500); // Debounce updates
     return () => clearTimeout(handler);
-  }, [tournamentImageUrl, startListData, mainHeading, partnerLogoUrl, updateTemplate]);
+  }, [startListData, mainHeading, partnerLogoUrl, updateTemplate]);
 
 
   const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -185,16 +183,6 @@ export default function TemplateEditorPage() {
             </CardHeader>
             <CardContent>
               <Input type="text" value={mainHeading} onChange={(e) => setMainHeading(e.target.value)} />
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><LinkIcon className="text-primary"/>Odkaz na obrázek turnaje</CardTitle>
-              <CardDescription>Vložte odkaz na hlavní obrázek.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Input type="url" placeholder="https://..." value={tournamentImageUrl} onChange={(e) => setTournamentImageUrl(e.target.value)} />
             </CardContent>
           </Card>
           
