@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, Download, Loader2, Image as ImageIcon, FileText, CheckCircle2 } from 'lucide-react';
+import { Upload, Download, Loader2, Image as ImageIcon, FileText, CheckCircle2, CaseSensitive } from 'lucide-react';
 import Papa from 'papaparse';
 import { TemplatePreview } from '@/components/template-preview';
 import { useToast } from "@/hooks/use-toast"
@@ -15,13 +15,17 @@ export default function TemplateEditorPage() {
   const [originalHtml, setOriginalHtml] = useState('');
   const [modifiedHtml, setModifiedHtml] = useState('');
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [partnerLogo, setPartnerLogo] = useState<string | null>(null);
   const [startListData, setStartListData] = useState<string[][] | null>(null);
+  const [mainHeading, setMainHeading] = useState('Týčko tour Golf Park Slapy Svatý Jan');
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [partnerLogoFile, setPartnerLogoFile] = useState<File | null>(null);
   const [csvFile, setCsvFile] = useState<File | null>(null);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const partnerLogoInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -46,11 +50,32 @@ export default function TemplateEditorPage() {
 
     const parser = new DOMParser();
     const doc = parser.parseFromString(originalHtml, 'text/html');
+    
+    const headingElement = doc.querySelector('h1');
+    if (headingElement) {
+        headingElement.textContent = mainHeading;
+    }
 
     if (uploadedImage) {
       const imgElement = doc.querySelector('img[alt="Týčko tour Golf Park Slapy Svatý Jan"]');
       if (imgElement) {
         imgElement.setAttribute('src', uploadedImage);
+      }
+    }
+    
+    if (partnerLogo) {
+      let partnerLogoImg = doc.querySelector('img[alt="Partner logo"]');
+      if (!partnerLogoImg) {
+        const heading = doc.querySelector('h1');
+        if (heading) {
+            partnerLogoImg = doc.createElement('img');
+            partnerLogoImg.setAttribute('alt', 'Partner logo');
+            partnerLogoImg.setAttribute('style', 'max-width: 150px; max-height: 80px; margin: 10px auto; display: block;');
+            heading.parentNode?.insertBefore(partnerLogoImg, heading.nextSibling);
+        }
+      }
+      if(partnerLogoImg) {
+        partnerLogoImg.setAttribute('src', partnerLogo);
       }
     }
 
@@ -91,11 +116,11 @@ export default function TemplateEditorPage() {
     const newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(doc.documentElement);
     setModifiedHtml(newHtml);
     setIsProcessing(false);
-  }, [originalHtml, uploadedImage, startListData]);
+  }, [originalHtml, uploadedImage, startListData, mainHeading, partnerLogo]);
 
   useEffect(() => {
     updateTemplate();
-  }, [uploadedImage, startListData, updateTemplate]);
+  }, [uploadedImage, startListData, mainHeading, partnerLogo, updateTemplate]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -112,6 +137,26 @@ export default function TemplateEditorPage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setUploadedImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePartnerLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast({
+            variant: "destructive",
+            title: "Chyba",
+            description: "Prosím, nahrajte platný obrázkový soubor.",
+          });
+        return;
+      }
+      setPartnerLogoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPartnerLogo(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -168,6 +213,16 @@ export default function TemplateEditorPage() {
         <aside className="lg:col-span-1 flex flex-col gap-6">
           <Card className="shadow-md">
             <CardHeader>
+              <CardTitle className="flex items-center gap-2"><CaseSensitive className="text-primary"/>Hlavní nadpis</CardTitle>
+              <CardDescription>Změňte hlavní nadpis v šabloně.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Input type="text" value={mainHeading} onChange={(e) => setMainHeading(e.target.value)} />
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-md">
+            <CardHeader>
               <CardTitle className="flex items-center gap-2"><ImageIcon className="text-primary"/>Nahrát obrázek turnaje</CardTitle>
               <CardDescription>Vyměňte hlavní obrázek v šabloně.</CardDescription>
             </CardHeader>
@@ -177,6 +232,20 @@ export default function TemplateEditorPage() {
                 <Upload className="mr-2 h-4 w-4" /> Vybrat obrázek
               </Button>
               {imageFile && <div className="mt-4 text-sm text-muted-foreground flex items-center gap-2 p-2 bg-secondary rounded-md"><CheckCircle2 className="text-green-500"/><span>{imageFile.name}</span></div>}
+            </CardContent>
+          </Card>
+          
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><ImageIcon className="text-primary"/>Nahrát logo partnera</CardTitle>
+              <CardDescription>Přidejte logo partnera do šablony.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Input type="file" accept="image/*" onChange={handlePartnerLogoUpload} ref={partnerLogoInputRef} className="hidden" id="partner-logo-upload" />
+              <Button onClick={() => partnerLogoInputRef.current?.click()} className="w-full">
+                <Upload className="mr-2 h-4 w-4" /> Vybrat logo
+              </Button>
+              {partnerLogoFile && <div className="mt-4 text-sm text-muted-foreground flex items-center gap-2 p-2 bg-secondary rounded-md"><CheckCircle2 className="text-green-500"/><span>{partnerLogoFile.name}</span></div>}
             </CardContent>
           </Card>
 
