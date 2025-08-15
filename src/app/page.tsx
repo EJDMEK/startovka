@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, Download, Loader2, CaseSensitive, Link as LinkIcon, FileText, CheckCircle2, Image as ImageIcon } from 'lucide-react';
+import { Upload, Download, Loader2, CaseSensitive, Link as LinkIcon, FileText, CheckCircle2, Image as ImageIcon, Trophy } from 'lucide-react';
 import Papa from 'papaparse';
 import { TemplatePreview } from '@/components/template-preview';
 import { useToast } from "@/hooks/use-toast"
@@ -23,6 +23,9 @@ export default function TemplateEditorPage() {
   const [startListData, setStartListData] = useState<string[][] | null>(null);
   const [mainHeading, setMainHeading] = useState('Týčko tour Golf Park Slapy Svatý Jan');
   
+  const [longestDriveText, setLongestDriveText] = useState('6 - Longest drive samostatná');
+  const [nearestToPinText, setNearestToPinText] = useState('8 - Nearest to pin společná');
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
 
@@ -49,6 +52,11 @@ export default function TemplateEditorPage() {
     setIsProcessing(true);
 
     let currentHtml = originalHtml;
+    
+    // Simple text replacements for competitions to avoid complex DOM parsing
+    currentHtml = currentHtml.replace(/6 - Longest drive samostatná/g, longestDriveText);
+    currentHtml = currentHtml.replace(/8 - Nearest to pin společná/g, nearestToPinText);
+
     const parser = new DOMParser();
     const doc = parser.parseFromString(currentHtml, 'text/html');
     
@@ -139,7 +147,7 @@ export default function TemplateEditorPage() {
     const newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(doc.documentElement);
     setModifiedHtml(newHtml);
     setIsProcessing(false);
-  }, [originalHtml, startListData, mainHeading, tournamentImageUrl, partnerLogoUrl, showPartnerSection, partnerLinkUrl]);
+  }, [originalHtml, startListData, mainHeading, tournamentImageUrl, partnerLogoUrl, showPartnerSection, partnerLinkUrl, longestDriveText, nearestToPinText]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -243,6 +251,23 @@ export default function TemplateEditorPage() {
                     </div>
                 </CardContent>
             )}
+          </Card>
+
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Trophy className="text-primary"/>Vložené soutěže</CardTitle>
+              <CardDescription>Upravte texty pro vložené soutěže.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="longest-drive">Longest Drive</Label>
+                <Input id="longest-drive" type="text" value={longestDriveText} onChange={(e) => setLongestDriveText(e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="nearest-to-pin">Nearest to Pin</Label>
+                <Input id="nearest-to-pin" type="text" value={nearestToPinText} onChange={(e) => setNearestToPinText(e.target.value)} />
+              </div>
+            </CardContent>
           </Card>
 
           <Card className="shadow-md">
