@@ -148,21 +148,16 @@ export default function TemplateEditorPage() {
             });
           }
         }
-
-        // Competitions
-        const allTds = Array.from(doc.getElementsByTagName('td'));
-        const longestDriveTd = allTds.find(td => td.textContent?.includes('Longest drive'));
-        if (longestDriveTd) {
-            longestDriveTd.textContent = longestDriveText;
-        }
-
-        const nearestToPinTd = allTds.find(td => td.textContent?.includes('Nearest to pin'));
-        if (nearestToPinTd) {
-            nearestToPinTd.textContent = nearestToPinText;
-        }
-
+        
+        // This part is complex due to the HTML structure (text nodes with <br>)
+        // A simple text replacement is safer here than DOM manipulation.
         const serializer = new XMLSerializer();
-        const newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(doc.documentElement);
+        let newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(doc.documentElement);
+
+        // Competitions - Replace text directly in the serialized HTML
+        newHtml = newHtml.replace('6 - Longest drive samostatná', longestDriveText);
+        newHtml = newHtml.replace('8 - Nearest to pin společná', nearestToPinText);
+        
         setModifiedHtml(newHtml);
     } catch (error) {
         console.error("Error updating template:", error);
@@ -267,10 +262,9 @@ export default function TemplateEditorPage() {
         let heightLeft = imgHeight;
         let position = 0;
 
-        if (imgHeight < pdfHeight) {
-          imgHeight = pdfHeight;
-          imgWidth = imgHeight * ratio;
-        }
+        // If the content is short, don't stretch it weirdly.
+        // Let it have its natural height based on A4 width.
+        // But if it's longer than one page, it needs to be handled in chunks.
         
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
         heightLeft -= pdfHeight;
