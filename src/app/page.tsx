@@ -5,13 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, Download, Loader2, CaseSensitive, Link as LinkIcon, FileText, CheckCircle2, Image as ImageIcon, Trophy, File as FileIcon } from 'lucide-react';
+import { Upload, Download, Loader2, CaseSensitive, Link as LinkIcon, FileText, CheckCircle2, Image as ImageIcon, Trophy } from 'lucide-react';
 import Papa from 'papaparse';
 import { TemplatePreview } from '@/components/template-preview';
 import { useToast } from "@/hooks/use-toast"
 import { Switch } from '@/components/ui/switch';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 export default function TemplateEditorPage() {
   const { toast } = useToast();
@@ -29,7 +27,6 @@ export default function TemplateEditorPage() {
   const [nearestToPinText, setNearestToPinText] = useState('8 - Nearest to pin společná');
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
 
   const csvInputRef = useRef<HTMLInputElement>(null);
@@ -149,8 +146,6 @@ export default function TemplateEditorPage() {
           }
         }
         
-        // This part is complex due to the HTML structure (text nodes with <br>)
-        // A simple text replacement is safer here than DOM manipulation.
         const serializer = new XMLSerializer();
         let newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(doc.documentElement);
 
@@ -214,83 +209,6 @@ export default function TemplateEditorPage() {
         title: "Staženo",
         description: "Šablona byla úspěšně stažena.",
       });
-  };
-
-  const handleDownloadPdf = () => {
-    if (!iframeRef.current?.contentWindow?.document.body) {
-        toast({
-            variant: "destructive",
-            title: "Chyba",
-            description: "Náhled není připraven pro export do PDF.",
-        });
-        return;
-    }
-
-    setIsPdfLoading(true);
-
-    const iframeDoc = iframeRef.current.contentWindow.document;
-    const contentToCapture = iframeDoc.body; 
-
-    if (!contentToCapture) {
-      toast({
-          variant: "destructive",
-          title: "Chyba při generování PDF",
-          description: "Nepodařilo se najít hlavní kontejner šablony.",
-      });
-      setIsPdfLoading(false);
-      return;
-    }
-    
-    html2canvas(contentToCapture, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-    }).then(canvas => {
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        
-        const canvasWidth = canvas.width;
-        const canvasHeight = canvas.height;
-        const ratio = canvasWidth / canvasHeight;
-        
-        let imgWidth = pdfWidth; 
-        let imgHeight = imgWidth / ratio;
-        
-        let heightLeft = imgHeight;
-        let position = 0;
-
-        // If the content is short, don't stretch it weirdly.
-        // Let it have its natural height based on A4 width.
-        // But if it's longer than one page, it needs to be handled in chunks.
-        
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
-
-        while (heightLeft > 0) {
-            position = -heightLeft;
-            pdf.addPage();
-            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-            heightLeft -= pdfHeight;
-        }
-
-        pdf.save('startovni-listina.pdf');
-        setIsPdfLoading(false);
-        toast({
-            title: "Staženo",
-            description: "PDF bylo úspěšně staženo.",
-          });
-    }).catch(err => {
-        console.error("PDF generation error:", err);
-        toast({
-            variant: "destructive",
-            title: "Chyba při generování PDF",
-            description: "Nepodařilo se vytvořit PDF soubor. Zkuste to prosím znovu.",
-        });
-        setIsPdfLoading(false);
-    });
   };
 
   return (
@@ -385,10 +303,6 @@ export default function TemplateEditorPage() {
                 {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                 Stáhnout HTML
             </Button>
-            <Button onClick={handleDownloadPdf} size="lg" className="w-full font-bold" variant="outline" disabled={isPdfLoading || !modifiedHtml}>
-                {isPdfLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileIcon className="mr-2 h-4 w-4" />}
-                Stáhnout PDF
-            </Button>
           </div>
         </aside>
 
@@ -399,5 +313,3 @@ export default function TemplateEditorPage() {
     </div>
   );
 }
-
-    
