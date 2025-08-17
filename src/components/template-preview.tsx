@@ -2,17 +2,26 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, forwardRef } from "react";
 
 interface TemplatePreviewProps {
   htmlContent: string;
 }
 
-export function TemplatePreview({ htmlContent }: TemplatePreviewProps) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+export const TemplatePreview = forwardRef<HTMLIFrameElement, TemplatePreviewProps>(({ htmlContent }, ref) => {
+  const internalRef = useRef<HTMLIFrameElement>(null);
+  const combinedRef = (el: HTMLIFrameElement) => {
+    (internalRef as React.MutableRefObject<HTMLIFrameElement | null>).current = el;
+    if (typeof ref === 'function') {
+      ref(el);
+    } else if (ref) {
+      ref.current = el;
+    }
+  };
+
 
   useEffect(() => {
-    const iframe = iframeRef.current;
+    const iframe = internalRef.current;
     if (iframe) {
       const handleLoad = () => {
         if (iframe.contentWindow) {
@@ -28,8 +37,12 @@ export function TemplatePreview({ htmlContent }: TemplatePreviewProps) {
           iframe.style.height = `${height}px`;
         }
       };
+      // Manually trigger a load to set initial height, especially for srcDoc
+      if (iframe.contentWindow?.document.readyState === 'complete') {
+        handleLoad();
+      }
       iframe.addEventListener('load', handleLoad);
-      handleLoad();
+      
       return () => {
         iframe.removeEventListener('load', handleLoad);
       };
@@ -45,7 +58,7 @@ export function TemplatePreview({ htmlContent }: TemplatePreviewProps) {
       <CardContent className="p-2 sm:p-6">
         {htmlContent ? (
           <iframe
-            ref={iframeRef}
+            ref={combinedRef}
             srcDoc={htmlContent}
             title="Template Preview"
             className="w-full border rounded-md bg-white"
@@ -75,4 +88,6 @@ export function TemplatePreview({ htmlContent }: TemplatePreviewProps) {
       </CardContent>
     </Card>
   );
-}
+});
+
+TemplatePreview.displayName = 'TemplatePreview';

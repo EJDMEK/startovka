@@ -5,11 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, Download, Loader2, CaseSensitive, Link as LinkIcon, FileText, CheckCircle2, Image as ImageIcon, Trophy } from 'lucide-react';
+import { Upload, Download, Loader2, CaseSensitive, Link as LinkIcon, FileText, CheckCircle2, Image as ImageIcon, Trophy, File as FileIcon } from 'lucide-react';
 import Papa from 'papaparse';
 import { TemplatePreview } from '@/components/template-preview';
 import { useToast } from "@/hooks/use-toast"
 import { Switch } from '@/components/ui/switch';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export default function TemplateEditorPage() {
   const { toast } = useToast();
@@ -27,9 +29,12 @@ export default function TemplateEditorPage() {
   const [nearestToPinText, setNearestToPinText] = useState('8 - Nearest to pin společná');
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
 
   const csvInputRef = useRef<HTMLInputElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
 
   useEffect(() => {
     fetch('/template.html')
@@ -53,7 +58,6 @@ export default function TemplateEditorPage() {
 
     let currentHtml = originalHtml;
     
-    // Simple text replacements for competitions to avoid complex DOM parsing
     currentHtml = currentHtml.replace(/6 - Longest drive samostatná/g, longestDriveText);
     currentHtml = currentHtml.replace(/8 - Nearest to pin společná/g, nearestToPinText);
 
@@ -77,7 +81,7 @@ export default function TemplateEditorPage() {
             const partnerRow = partnerSectionTd.parentElement;
             if (partnerRow) {
                 if (showPartnerSection) {
-                    partnerRow.style.display = '';
+                    (partnerRow as HTMLElement).style.display = '';
                     const partnerLogoImg = partnerRow.querySelector('img[alt="Partner Logo"]');
                     if (partnerLogoUrl && partnerLogoImg) {
                         partnerLogoImg.setAttribute('src', partnerLogoUrl);
@@ -104,7 +108,7 @@ export default function TemplateEditorPage() {
                         }
                     }
                 } else {
-                    partnerRow.style.display = 'none';
+                    (partnerRow as HTMLElement).style.display = 'none';
                 }
             }
         }
@@ -197,6 +201,99 @@ export default function TemplateEditorPage() {
       });
   };
 
+  const handleDownloadPdf = () => {
+    if (!iframeRef.current?.contentWindow?.document.body) {
+        toast({
+            variant: "destructive",
+            title: "Chyba",
+            description: "Náhled není připraven pro export do PDF.",
+        });
+        return;
+    }
+
+    setIsPdfLoading(true);
+
+    const iframeDoc = iframeRef.current.contentWindow.document;
+    const content = iframeDoc.body;
+
+    // A4 width in pixels at 96 DPI is approx 794px. We'll use this for the canvas width.
+    const a4WidthPx = 794;
+    const originalWidth = content.style.width;
+    const container = content.querySelector('table.body') as HTMLElement;
+    const originalContainerWidth = container ? container.style.width : '';
+
+    // Temporarily set a fixed width for the content to match A4 proportions
+    if (container) {
+      container.style.width = `${a4WidthPx}px`;
+    } else {
+      content.style.width = `${a4WidthPx}px`;
+    }
+
+    html2canvas(content, {
+        scale: 2,
+        useCORS: true, 
+        logging: false,
+        width: a4WidthPx, // Set canvas width to A4 width
+        windowWidth: a4WidthPx,
+    }).then(canvas => {
+        // Restore original width
+        if (container) {
+          container.style.width = originalContainerWidth;
+        } else {
+          content.style.width = originalWidth;
+        }
+
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const ratio = canvasWidth / canvasHeight;
+        
+        // Let image width be the full width of the PDF page, and calculate height based on aspect ratio
+        const imgWidth = pdfWidth; 
+        const imgHeight = imgWidth / ratio;
+        
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        // Add the first page
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+
+        // Add new pages if content overflows
+        while (heightLeft > 0) {
+            position = heightLeft - imgHeight; // Recalculate position for the new page
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pdfHeight;
+        }
+
+        pdf.save('startovni-listina.pdf');
+        setIsPdfLoading(false);
+        toast({
+            title: "Staženo",
+            description: "PDF bylo úspěšně staženo.",
+          });
+    }).catch(err => {
+        // Restore original width in case of error
+        if (container) {
+          container.style.width = originalContainerWidth;
+        } else {
+          content.style.width = originalWidth;
+        }
+
+        console.error("PDF generation error:", err);
+        toast({
+            variant: "destructive",
+            title: "Chyba při generování PDF",
+            description: "Nepodařilo se vytvořit PDF soubor. Zkuste to prosím znovu.",
+        });
+        setIsPdfLoading(false);
+    });
+  };
+
   return (
     <div className="container mx-auto p-4 md:p-8 bg-background font-body">
       <header className="text-center mb-8">
@@ -284,14 +381,20 @@ export default function TemplateEditorPage() {
             </CardContent>
           </Card>
           
-          <Button onClick={handleDownload} size="lg" className="w-full font-bold" disabled={isProcessing || !modifiedHtml}>
-            {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-            Stáhnout upravenou šablonu
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button onClick={handleDownload} size="lg" className="w-full font-bold" disabled={isProcessing || !modifiedHtml}>
+                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                Stáhnout HTML
+            </Button>
+            <Button onClick={handleDownloadPdf} size="lg" className="w-full font-bold" variant="outline" disabled={isPdfLoading || !modifiedHtml}>
+                {isPdfLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileIcon className="mr-2 h-4 w-4" />}
+                Stáhnout PDF
+            </Button>
+          </div>
         </aside>
 
         <main className="lg:col-span-2">
-            <TemplatePreview htmlContent={modifiedHtml} />
+            <TemplatePreview htmlContent={modifiedHtml} ref={iframeRef} />
         </main>
       </div>
     </div>
