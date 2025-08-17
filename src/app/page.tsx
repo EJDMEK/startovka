@@ -19,7 +19,7 @@ export default function TemplateEditorPage() {
   const [modifiedHtml, setModifiedHtml] = useState('');
   
   const [tournamentImageUrl, setTournamentImageUrl] = useState<string>('https://blog.tycko.cz/wp-content/uploads/2025/08/IMG-4082-mala-1631794192-medium.jpeg');
-  const [partnerLogoUrl, setPartnerLogoUrl] = useState<string>('https://blog.tycko.cz/wp-content/uploads/2025/08/golf-plan.png');
+  const [partnerLogoUrl, setPartnerLogoUrl] = useState<string>('https://blog.tycko.cz/wp-content/uploads/2025/08/tyckotourpng-scaled.png');
   const [partnerLinkUrl, setPartnerLinkUrl] = useState<string>('https://www.golfplan.cz');
   const [showPartnerSection, setShowPartnerSection] = useState(true);
   const [startListData, setStartListData] = useState<string[][] | null>(null);
@@ -41,7 +41,6 @@ export default function TemplateEditorPage() {
       .then(response => response.text())
       .then(data => {
         setOriginalHtml(data);
-        setModifiedHtml(data);
       }).catch(error => {
         console.error("Failed to fetch template:", error);
         toast({
@@ -56,25 +55,27 @@ export default function TemplateEditorPage() {
     if (!originalHtml) return;
     setIsProcessing(true);
 
-    let currentHtml = originalHtml;
-    
-    currentHtml = currentHtml.replace(/6 - Longest drive samostatná/g, longestDriveText);
-    currentHtml = currentHtml.replace(/8 - Nearest to pin společná/g, nearestToPinText);
-
     const parser = new DOMParser();
-    const doc = parser.parseFromString(currentHtml, 'text/html');
+    const doc = parser.parseFromString(originalHtml, 'text/html');
     
-    const headingElement = doc.querySelector('h1');
+    // Update simple text content via simple replacement to avoid breaking HTML structure
+    let currentHtml = doc.documentElement.outerHTML;
+    currentHtml = currentHtml.replace(/>6 - Longest drive samostatná</g, `>${longestDriveText}<`);
+    currentHtml = currentHtml.replace(/>8 - Nearest to pin společná</g, `>${nearestToPinText}<`);
+    
+    const finalDoc = parser.parseFromString(currentHtml, 'text/html');
+
+    const headingElement = finalDoc.querySelector('h1');
     if (headingElement) {
         headingElement.textContent = mainHeading;
     }
 
-    const tournamentImage = doc.querySelector('img[alt="Týčko tour Golf Park Slapy Svatý Jan"]');
+    const tournamentImage = finalDoc.querySelector('img[src="https://blog.tycko.cz/wp-content/uploads/2025/08/IMG-4082-mala-1631794192-medium.jpeg"]');
     if (tournamentImage && tournamentImageUrl) {
       tournamentImage.setAttribute('src', tournamentImageUrl);
     }
     
-    const partnerP = Array.from(doc.querySelectorAll('p')).find(p => p.textContent?.trim() === 'Partner turnaje');
+    const partnerP = Array.from(finalDoc.querySelectorAll('p')).find(p => p.textContent?.trim() === 'Partner turnaje');
     if (partnerP) {
         const partnerSectionTd = partnerP.closest('td[align="center"]');
         if (partnerSectionTd) {
@@ -87,6 +88,9 @@ export default function TemplateEditorPage() {
                         partnerLogoImg.setAttribute('src', partnerLogoUrl);
 
                         let link = partnerLogoImg.parentElement;
+                        while(link && link.tagName.toLowerCase() !== 'a' && link.parentElement) {
+                            link = link.parentElement;
+                        }
                         if (link && link.tagName.toLowerCase() !== 'a') {
                             link = null;
                         }
@@ -95,15 +99,15 @@ export default function TemplateEditorPage() {
                             if (link) {
                                 link.setAttribute('href', partnerLinkUrl);
                             } else {
-                                const newLink = doc.createElement('a');
+                                const newLink = finalDoc.createElement('a');
                                 newLink.setAttribute('href', partnerLinkUrl);
                                 newLink.setAttribute('target', '_blank');
                                 partnerLogoImg.replaceWith(newLink);
                                 newLink.appendChild(partnerLogoImg);
                             }
                         } else {
-                            if (link) {
-                                (link as HTMLElement).replaceWith(partnerLogoImg);
+                            if (link && link.parentElement) {
+                                link.parentElement.replaceChild(partnerLogoImg, link);
                             }
                         }
                     }
@@ -115,7 +119,7 @@ export default function TemplateEditorPage() {
     }
     
     if (startListData) {
-        const thElements = Array.from(doc.querySelectorAll('th'));
+        const thElements = Array.from(finalDoc.querySelectorAll('th'));
         const timeHeader = thElements.find(th => th.textContent?.trim() === 'Čas');
         const table = timeHeader?.closest('table');
         const tbody = table?.querySelector('tbody');
@@ -123,11 +127,11 @@ export default function TemplateEditorPage() {
       if (tbody) {
         tbody.innerHTML = '';
         startListData.forEach(rowData => {
-          const tr = doc.createElement('tr');
+          const tr = finalDoc.createElement('tr');
           tr.style.backgroundColor = '#ffffff';
 
           rowData.forEach((cellData, index) => {
-            const td = doc.createElement('td');
+            const td = finalDoc.createElement('td');
             td.style.padding = '8px 6px';
             td.style.border = '1px solid #000000';
             td.style.verticalAlign = 'top';
@@ -148,16 +152,13 @@ export default function TemplateEditorPage() {
     }
 
     const serializer = new XMLSerializer();
-    const newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(doc.documentElement);
+    const newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(finalDoc.documentElement);
     setModifiedHtml(newHtml);
     setIsProcessing(false);
   }, [originalHtml, startListData, mainHeading, tournamentImageUrl, partnerLogoUrl, showPartnerSection, partnerLinkUrl, longestDriveText, nearestToPinText]);
-
+  
   useEffect(() => {
-    const handler = setTimeout(() => {
-        updateTemplate();
-    }, 500); // Debounce updates
-    return () => clearTimeout(handler);
+    updateTemplate();
   }, [updateTemplate]);
 
 
@@ -214,57 +215,45 @@ export default function TemplateEditorPage() {
     setIsPdfLoading(true);
 
     const iframeDoc = iframeRef.current.contentWindow.document;
-    const content = iframeDoc.body;
+    // Target the main content table directly
+    const contentToCapture = iframeDoc.querySelector('.body') as HTMLElement;
 
-    // A4 width in pixels at 96 DPI is approx 794px. We'll use this for the canvas width.
-    const a4WidthPx = 794;
-    const container = content.querySelector('table.body') as HTMLElement;
-    if (!container) {
-        toast({
-            variant: "destructive",
-            title: "Chyba při generování PDF",
-            description: "Nepodařilo se najít hlavní kontejner šablony.",
-        });
-        setIsPdfLoading(false);
-        return;
+    if (!contentToCapture) {
+      toast({
+          variant: "destructive",
+          title: "Chyba při generování PDF",
+          description: "Nepodařilo se najít hlavní kontejner šablony.",
+      });
+      setIsPdfLoading(false);
+      return;
     }
-    const originalContainerWidth = container.style.width;
-
-    // Temporarily set a fixed width for the content to match A4 proportions
-    container.style.width = `${a4WidthPx}px`;
-
-    html2canvas(content, {
-        scale: 2,
-        useCORS: true, 
+    
+    html2canvas(contentToCapture, {
+        scale: 2, // Higher scale for better quality
+        useCORS: true, // Needed for external images
+        allowTaint: true,
         logging: false,
-        width: a4WidthPx, // Set canvas width to A4 width
-        windowWidth: a4WidthPx,
     }).then(canvas => {
-        // Restore original width
-        container.style.width = originalContainerWidth;
-
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
+        
         const canvasWidth = canvas.width;
         const canvasHeight = canvas.height;
         const ratio = canvasWidth / canvasHeight;
         
-        // Let image width be the full width of the PDF page, and calculate height based on aspect ratio
         const imgWidth = pdfWidth; 
         const imgHeight = imgWidth / ratio;
         
         let heightLeft = imgHeight;
         let position = 0;
 
-        // Add the first page
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
         heightLeft -= pdfHeight;
 
-        // Add new pages if content overflows
         while (heightLeft > 0) {
-            position = heightLeft - imgHeight; // Recalculate position for the new page
+            position = heightLeft - imgHeight;
             pdf.addPage();
             pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
             heightLeft -= pdfHeight;
@@ -277,9 +266,6 @@ export default function TemplateEditorPage() {
             description: "PDF bylo úspěšně staženo.",
           });
     }).catch(err => {
-        // Restore original width in case of error
-        container.style.width = originalContainerWidth;
-
         console.error("PDF generation error:", err);
         toast({
             variant: "destructive",
@@ -396,5 +382,3 @@ export default function TemplateEditorPage() {
     </div>
   );
 }
-
-    
