@@ -226,14 +226,32 @@ export default function TemplateEditorPage() {
     setIsDownloadingPng(true);
 
     try {
-        const iframeBody = iframeRef.current.contentWindow.document.body;
+        const iframeDoc = iframeRef.current.contentWindow.document;
+        const iframeBody = iframeDoc.body;
+        
+        const originalSrcs = new Map<HTMLImageElement, string>();
+        const images = Array.from(iframeDoc.querySelectorAll('img'));
+
+        images.forEach(img => {
+            if (img.src) {
+                originalSrcs.set(img, img.src);
+                img.src = `/api/proxy?url=${encodeURIComponent(img.src)}`;
+            }
+        });
+
+        // Wait a bit for proxied images to load
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         const canvas = await html2canvas(iframeBody, {
             width: iframeBody.scrollWidth,
             height: iframeBody.scrollHeight,
             scale: 2, 
-            useCORS: true,
-            allowTaint: true,
+            useCORS: true, 
+        });
+
+        // Restore original image sources
+        originalSrcs.forEach((src, img) => {
+            img.src = src;
         });
 
         const a4Width = 794; 
