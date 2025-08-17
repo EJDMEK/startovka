@@ -10,6 +10,7 @@ import Papa from 'papaparse';
 import { TemplatePreview } from '@/components/template-preview';
 import { useToast } from "@/hooks/use-toast"
 import { Switch } from '@/components/ui/switch';
+import html2canvas from 'html2canvas';
 
 export default function TemplateEditorPage() {
   const { toast } = useToast();
@@ -28,6 +29,7 @@ export default function TemplateEditorPage() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [isDownloadingPng, setIsDownloadingPng] = useState(false);
 
   const csvInputRef = useRef<HTMLInputElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -211,6 +213,66 @@ export default function TemplateEditorPage() {
       });
   };
 
+  const handleDownloadPng = async () => {
+    if (!iframeRef.current?.contentWindow?.document.body) {
+        toast({
+            variant: "destructive",
+            title: "Chyba",
+            description: "Náhled šablony není připraven.",
+        });
+        return;
+    }
+
+    setIsDownloadingPng(true);
+
+    try {
+        const iframeBody = iframeRef.current.contentWindow.document.body;
+        
+        const canvas = await html2canvas(iframeBody, {
+            width: iframeBody.scrollWidth,
+            height: iframeBody.scrollHeight,
+            scale: 2, 
+            useCORS: true,
+            allowTaint: true,
+        });
+
+        const a4Width = 794; 
+        const a4Canvas = document.createElement('canvas');
+        a4Canvas.width = a4Width;
+        const aspectRatio = canvas.height / canvas.width;
+        a4Canvas.height = a4Width * aspectRatio;
+
+        const ctx = a4Canvas.getContext('2d');
+        if (ctx) {
+            ctx.drawImage(canvas, 0, 0, a4Canvas.width, a4Canvas.height);
+        }
+        
+        const dataUrl = a4Canvas.toDataURL('image/png');
+
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = 'startovni-listina-A4.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        toast({
+            title: "Staženo",
+            description: "PNG soubor byl úspěšně stažen.",
+        });
+
+    } catch (error) {
+        console.error("Error generating PNG:", error);
+        toast({
+            variant: "destructive",
+            title: "Chyba při generování PNG",
+            description: "Nepodařilo se vygenerovat obrázek.",
+        });
+    } finally {
+        setIsDownloadingPng(false);
+    }
+  };
+
   return (
     <div className="container mx-auto p-4 md:p-8 bg-background font-body">
       <header className="text-center mb-8">
@@ -302,6 +364,10 @@ export default function TemplateEditorPage() {
             <Button onClick={handleDownload} size="lg" className="w-full font-bold" disabled={isProcessing || !modifiedHtml}>
                 {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                 Stáhnout HTML
+            </Button>
+            <Button onClick={handleDownloadPng} size="lg" className="w-full font-bold" disabled={isProcessing || !modifiedHtml || isDownloadingPng}>
+                {isDownloadingPng ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ImageIcon className="mr-2 h-4 w-4" />}
+                Stáhnout PNG (A4)
             </Button>
           </div>
         </aside>
