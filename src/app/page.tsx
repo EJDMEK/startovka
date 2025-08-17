@@ -145,13 +145,30 @@ export default function TemplateEditorPage() {
             });
           }
         }
+
+        // --- A4 Width and Padding Removal ---
+        // Find the main content table
+        const bodyTable = doc.querySelector('table.body');
+        if (bodyTable) {
+            bodyTable.setAttribute('width', '794'); // A4 width in pixels (approx)
+            
+            // Find and remove the spacer cells
+            const spacerCells = Array.from(bodyTable.querySelectorAll('td.container')).map(el => el.parentElement?.querySelector('td.wrapper > table > tbody > tr > td[height="40"]')).filter(Boolean);
+            spacerCells.forEach(cell => cell?.parentElement?.removeChild(cell));
+            
+            const mainContentTable = bodyTable.querySelector('td.wrapper > table');
+            if(mainContentTable){
+                 mainContentTable.setAttribute('width', '100%');
+            }
+        }
+         // --- End of A4 adjustment ---
         
         const serializer = new XMLSerializer();
         let newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(doc.documentElement);
 
         // Competitions - Replace text directly in the serialized HTML
-        newHtml = newHtml.replace('6 - Longest drive samostatná', longestDriveText);
-        newHtml = newHtml.replace('8 - Nearest to pin společná', nearestToPinText);
+        newHtml = newHtml.replace('>6 - Longest drive samostatná<', `>${longestDriveText}<`);
+        newHtml = newHtml.replace('>8 - Nearest to pin společná<', `>${nearestToPinText}<`);
         
         setModifiedHtml(newHtml);
     } catch (error) {
