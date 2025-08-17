@@ -55,111 +55,126 @@ export default function TemplateEditorPage() {
     if (!originalHtml) return;
     setIsProcessing(true);
 
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(originalHtml, 'text/html');
+    try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(originalHtml, 'text/html');
 
-    const headingElement = doc.querySelector('h1');
-    if (headingElement) {
-        headingElement.textContent = mainHeading;
-    }
+        // Main Heading
+        const headingElement = doc.querySelector('h1');
+        if (headingElement) {
+            headingElement.textContent = mainHeading;
+        }
 
-    const tournamentImage = doc.querySelector('img[src="https://blog.tycko.cz/wp-content/uploads/2025/08/IMG-4082-mala-1631794192-medium.jpeg"]');
-    if (tournamentImage && tournamentImageUrl) {
-      tournamentImage.setAttribute('src', tournamentImageUrl);
-    }
-    
-    const partnerP = Array.from(doc.querySelectorAll('p')).find(p => p.textContent?.trim() === 'Partner turnaje');
-    if (partnerP) {
-        const partnerSectionTd = partnerP.closest('td[align="center"]');
-        if (partnerSectionTd) {
-            const partnerRow = partnerSectionTd.parentElement;
-            if (partnerRow) {
-                if (showPartnerSection) {
-                    (partnerRow as HTMLElement).style.display = '';
-                    const partnerLogoImg = partnerRow.querySelector('img[alt="Partner Logo"]');
-                    if (partnerLogoUrl && partnerLogoImg) {
-                        partnerLogoImg.setAttribute('src', partnerLogoUrl);
+        // Tournament Image
+        const tournamentImage = doc.querySelector('img[src="https://blog.tycko.cz/wp-content/uploads/2025/08/IMG-4082-mala-1631794192-medium.jpeg"]');
+        if (tournamentImage && tournamentImageUrl) {
+          tournamentImage.setAttribute('src', tournamentImageUrl);
+        }
+        
+        // Partner Section
+        const partnerP = Array.from(doc.querySelectorAll('p')).find(p => p.textContent?.trim() === 'Partner turnaje');
+        if (partnerP) {
+            const partnerSectionTd = partnerP.closest('td[align="center"]');
+            if (partnerSectionTd) {
+                const partnerRow = partnerSectionTd.parentElement;
+                if (partnerRow) {
+                    if (showPartnerSection) {
+                        (partnerRow as HTMLElement).style.display = '';
+                        const partnerLogoImg = partnerRow.querySelector('img[alt="Partner Logo"]');
+                        if (partnerLogoUrl && partnerLogoImg) {
+                            partnerLogoImg.setAttribute('src', partnerLogoUrl);
 
-                        let link = partnerLogoImg.parentElement;
-                        while(link && link.tagName.toLowerCase() !== 'a' && link.parentElement) {
-                            link = link.parentElement;
-                        }
-                        if (link && link.tagName.toLowerCase() !== 'a') {
-                            link = null;
-                        }
+                            let link = partnerLogoImg.parentElement;
+                            while(link && link.tagName.toLowerCase() !== 'a' && link.parentElement) {
+                                link = link.parentElement;
+                            }
+                            if (link && link.tagName.toLowerCase() !== 'a') {
+                                link = null;
+                            }
 
-                        if (partnerLinkUrl) {
-                            if (link) {
-                                link.setAttribute('href', partnerLinkUrl);
+                            if (partnerLinkUrl) {
+                                if (link) {
+                                    link.setAttribute('href', partnerLinkUrl);
+                                } else {
+                                    const newLink = doc.createElement('a');
+                                    newLink.setAttribute('href', partnerLinkUrl);
+                                    newLink.setAttribute('target', '_blank');
+                                    partnerLogoImg.replaceWith(newLink);
+                                    newLink.appendChild(partnerLogoImg);
+                                }
                             } else {
-                                const newLink = doc.createElement('a');
-                                newLink.setAttribute('href', partnerLinkUrl);
-                                newLink.setAttribute('target', '_blank');
-                                partnerLogoImg.replaceWith(newLink);
-                                newLink.appendChild(partnerLogoImg);
-                            }
-                        } else {
-                            if (link && link.parentElement) {
-                                link.parentElement.replaceChild(partnerLogoImg, link);
+                                if (link && link.parentElement) {
+                                    link.parentElement.replaceChild(partnerLogoImg, link);
+                                }
                             }
                         }
+                    } else {
+                        (partnerRow as HTMLElement).style.display = 'none';
                     }
-                } else {
-                    (partnerRow as HTMLElement).style.display = 'none';
                 }
             }
         }
-    }
-    
-    if (startListData) {
-        const thElements = Array.from(doc.querySelectorAll('th'));
-        const timeHeader = thElements.find(th => th.textContent?.trim() === 'Čas');
-        const table = timeHeader?.closest('table');
-        const tbody = table?.querySelector('tbody');
+        
+        // Start List Data
+        if (startListData) {
+            const thElements = Array.from(doc.querySelectorAll('th'));
+            const timeHeader = thElements.find(th => th.textContent?.trim() === 'Čas');
+            const table = timeHeader?.closest('table');
+            const tbody = table?.querySelector('tbody');
 
-      if (tbody) {
-        tbody.innerHTML = '';
-        startListData.forEach(rowData => {
-          const tr = doc.createElement('tr');
-          tr.style.backgroundColor = '#ffffff';
+          if (tbody) {
+            tbody.innerHTML = '';
+            startListData.forEach(rowData => {
+              const tr = doc.createElement('tr');
+              tr.style.backgroundColor = '#ffffff';
 
-          rowData.forEach((cellData, index) => {
-            const td = doc.createElement('td');
-            td.style.padding = '8px 6px';
-            td.style.border = '1px solid #000000';
-            td.style.verticalAlign = 'top';
-            td.textContent = cellData;
+              rowData.forEach((cellData, index) => {
+                const td = doc.createElement('td');
+                td.style.padding = '8px 6px';
+                td.style.border = '1px solid #000000';
+                td.style.verticalAlign = 'top';
+                td.textContent = cellData;
 
-            if (index < 2) {
-              td.style.textAlign = 'center';
-              td.style.fontWeight = '600';
-              td.style.color = '#268068';
-            } else {
-              td.style.textAlign = 'left';
-            }
-            tr.appendChild(td);
-          });
-          tbody.appendChild(tr);
+                if (index < 2) {
+                  td.style.textAlign = 'center';
+                  td.style.fontWeight = '600';
+                  td.style.color = '#268068';
+                } else {
+                  td.style.textAlign = 'left';
+                }
+                tr.appendChild(td);
+              });
+              tbody.appendChild(tr);
+            });
+          }
+        }
+
+        // Competitions
+        const allTds = Array.from(doc.getElementsByTagName('td'));
+        const longestDriveTd = allTds.find(td => td.textContent?.includes('Longest drive'));
+        if (longestDriveTd) {
+            longestDriveTd.textContent = longestDriveText;
+        }
+
+        const nearestToPinTd = allTds.find(td => td.textContent?.includes('Nearest to pin'));
+        if (nearestToPinTd) {
+            nearestToPinTd.textContent = nearestToPinText;
+        }
+
+        const serializer = new XMLSerializer();
+        const newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(doc.documentElement);
+        setModifiedHtml(newHtml);
+    } catch (error) {
+        console.error("Error updating template:", error);
+        toast({
+            variant: "destructive",
+            title: "Chyba při aktualizaci",
+            description: "Došlo k chybě při úpravě šablony.",
         });
-      }
+    } finally {
+        setIsProcessing(false);
     }
-
-    const allTds = Array.from(doc.getElementsByTagName('td'));
-    const longestDriveTd = allTds.find(td => td.textContent?.includes('Longest drive'));
-    if (longestDriveTd) {
-        longestDriveTd.textContent = longestDriveText;
-    }
-
-    const nearestToPinTd = allTds.find(td => td.textContent?.includes('Nearest to pin'));
-    if (nearestToPinTd) {
-        nearestToPinTd.textContent = nearestToPinText;
-    }
-
-    const serializer = new XMLSerializer();
-    const newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(doc.documentElement);
-    setModifiedHtml(newHtml);
-    setIsProcessing(false);
-  }, [originalHtml, startListData, mainHeading, tournamentImageUrl, partnerLogoUrl, showPartnerSection, partnerLinkUrl, longestDriveText, nearestToPinText]);
+  }, [originalHtml, startListData, mainHeading, tournamentImageUrl, partnerLogoUrl, showPartnerSection, partnerLinkUrl, longestDriveText, nearestToPinText, toast]);
   
   useEffect(() => {
     updateTemplate();
@@ -219,7 +234,7 @@ export default function TemplateEditorPage() {
     setIsPdfLoading(true);
 
     const iframeDoc = iframeRef.current.contentWindow.document;
-    const contentToCapture = iframeDoc.body as HTMLElement;
+    const contentToCapture = iframeDoc.body; 
 
     if (!contentToCapture) {
       toast({
@@ -246,17 +261,22 @@ export default function TemplateEditorPage() {
         const canvasHeight = canvas.height;
         const ratio = canvasWidth / canvasHeight;
         
-        const imgWidth = pdfWidth; 
-        const imgHeight = imgWidth / ratio;
+        let imgWidth = pdfWidth; 
+        let imgHeight = imgWidth / ratio;
         
         let heightLeft = imgHeight;
         let position = 0;
 
+        if (imgHeight < pdfHeight) {
+          imgHeight = pdfHeight;
+          imgWidth = imgHeight * ratio;
+        }
+        
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
         heightLeft -= pdfHeight;
 
         while (heightLeft > 0) {
-            position = heightLeft - imgHeight;
+            position = -heightLeft;
             pdf.addPage();
             pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
             heightLeft -= pdfHeight;
@@ -385,3 +405,5 @@ export default function TemplateEditorPage() {
     </div>
   );
 }
+
+    
