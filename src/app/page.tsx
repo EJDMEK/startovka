@@ -57,25 +57,18 @@ export default function TemplateEditorPage() {
 
     const parser = new DOMParser();
     const doc = parser.parseFromString(originalHtml, 'text/html');
-    
-    // Update simple text content via simple replacement to avoid breaking HTML structure
-    let currentHtml = doc.documentElement.outerHTML;
-    currentHtml = currentHtml.replace(/>6 - Longest drive samostatná</g, `>${longestDriveText}<`);
-    currentHtml = currentHtml.replace(/>8 - Nearest to pin společná</g, `>${nearestToPinText}<`);
-    
-    const finalDoc = parser.parseFromString(currentHtml, 'text/html');
 
-    const headingElement = finalDoc.querySelector('h1');
+    const headingElement = doc.querySelector('h1');
     if (headingElement) {
         headingElement.textContent = mainHeading;
     }
 
-    const tournamentImage = finalDoc.querySelector('img[src="https://blog.tycko.cz/wp-content/uploads/2025/08/IMG-4082-mala-1631794192-medium.jpeg"]');
+    const tournamentImage = doc.querySelector('img[src="https://blog.tycko.cz/wp-content/uploads/2025/08/IMG-4082-mala-1631794192-medium.jpeg"]');
     if (tournamentImage && tournamentImageUrl) {
       tournamentImage.setAttribute('src', tournamentImageUrl);
     }
     
-    const partnerP = Array.from(finalDoc.querySelectorAll('p')).find(p => p.textContent?.trim() === 'Partner turnaje');
+    const partnerP = Array.from(doc.querySelectorAll('p')).find(p => p.textContent?.trim() === 'Partner turnaje');
     if (partnerP) {
         const partnerSectionTd = partnerP.closest('td[align="center"]');
         if (partnerSectionTd) {
@@ -99,7 +92,7 @@ export default function TemplateEditorPage() {
                             if (link) {
                                 link.setAttribute('href', partnerLinkUrl);
                             } else {
-                                const newLink = finalDoc.createElement('a');
+                                const newLink = doc.createElement('a');
                                 newLink.setAttribute('href', partnerLinkUrl);
                                 newLink.setAttribute('target', '_blank');
                                 partnerLogoImg.replaceWith(newLink);
@@ -119,7 +112,7 @@ export default function TemplateEditorPage() {
     }
     
     if (startListData) {
-        const thElements = Array.from(finalDoc.querySelectorAll('th'));
+        const thElements = Array.from(doc.querySelectorAll('th'));
         const timeHeader = thElements.find(th => th.textContent?.trim() === 'Čas');
         const table = timeHeader?.closest('table');
         const tbody = table?.querySelector('tbody');
@@ -127,11 +120,11 @@ export default function TemplateEditorPage() {
       if (tbody) {
         tbody.innerHTML = '';
         startListData.forEach(rowData => {
-          const tr = finalDoc.createElement('tr');
+          const tr = doc.createElement('tr');
           tr.style.backgroundColor = '#ffffff';
 
           rowData.forEach((cellData, index) => {
-            const td = finalDoc.createElement('td');
+            const td = doc.createElement('td');
             td.style.padding = '8px 6px';
             td.style.border = '1px solid #000000';
             td.style.verticalAlign = 'top';
@@ -151,8 +144,19 @@ export default function TemplateEditorPage() {
       }
     }
 
+    const allTds = Array.from(doc.getElementsByTagName('td'));
+    const longestDriveTd = allTds.find(td => td.textContent?.includes('Longest drive'));
+    if (longestDriveTd) {
+        longestDriveTd.textContent = longestDriveText;
+    }
+
+    const nearestToPinTd = allTds.find(td => td.textContent?.includes('Nearest to pin'));
+    if (nearestToPinTd) {
+        nearestToPinTd.textContent = nearestToPinText;
+    }
+
     const serializer = new XMLSerializer();
-    const newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(finalDoc.documentElement);
+    const newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(doc.documentElement);
     setModifiedHtml(newHtml);
     setIsProcessing(false);
   }, [originalHtml, startListData, mainHeading, tournamentImageUrl, partnerLogoUrl, showPartnerSection, partnerLinkUrl, longestDriveText, nearestToPinText]);
@@ -215,8 +219,7 @@ export default function TemplateEditorPage() {
     setIsPdfLoading(true);
 
     const iframeDoc = iframeRef.current.contentWindow.document;
-    // Target the main content table directly
-    const contentToCapture = iframeDoc.querySelector('.body') as HTMLElement;
+    const contentToCapture = iframeDoc.body as HTMLElement;
 
     if (!contentToCapture) {
       toast({
@@ -229,8 +232,8 @@ export default function TemplateEditorPage() {
     }
     
     html2canvas(contentToCapture, {
-        scale: 2, // Higher scale for better quality
-        useCORS: true, // Needed for external images
+        scale: 2,
+        useCORS: true,
         allowTaint: true,
         logging: false,
     }).then(canvas => {
