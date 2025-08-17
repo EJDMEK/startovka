@@ -234,6 +234,7 @@ export default function TemplateEditorPage() {
             scale: 2, 
             useCORS: true,
             allowTaint: true,
+            proxy: 'https://cors-anywhere.herokuapp.com/'
         });
 
         const a4Width = 794; 
@@ -379,5 +380,3 @@ export default function TemplateEditorPage() {
     </div>
   );
 }
-
-    
