@@ -218,16 +218,20 @@ export default function TemplateEditorPage() {
 
     // A4 width in pixels at 96 DPI is approx 794px. We'll use this for the canvas width.
     const a4WidthPx = 794;
-    const originalWidth = content.style.width;
     const container = content.querySelector('table.body') as HTMLElement;
-    const originalContainerWidth = container ? container.style.width : '';
+    if (!container) {
+        toast({
+            variant: "destructive",
+            title: "Chyba při generování PDF",
+            description: "Nepodařilo se najít hlavní kontejner šablony.",
+        });
+        setIsPdfLoading(false);
+        return;
+    }
+    const originalContainerWidth = container.style.width;
 
     // Temporarily set a fixed width for the content to match A4 proportions
-    if (container) {
-      container.style.width = `${a4WidthPx}px`;
-    } else {
-      content.style.width = `${a4WidthPx}px`;
-    }
+    container.style.width = `${a4WidthPx}px`;
 
     html2canvas(content, {
         scale: 2,
@@ -237,11 +241,7 @@ export default function TemplateEditorPage() {
         windowWidth: a4WidthPx,
     }).then(canvas => {
         // Restore original width
-        if (container) {
-          container.style.width = originalContainerWidth;
-        } else {
-          content.style.width = originalWidth;
-        }
+        container.style.width = originalContainerWidth;
 
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'mm', 'a4');
@@ -278,11 +278,7 @@ export default function TemplateEditorPage() {
           });
     }).catch(err => {
         // Restore original width in case of error
-        if (container) {
-          container.style.width = originalContainerWidth;
-        } else {
-          content.style.width = originalWidth;
-        }
+        container.style.width = originalContainerWidth;
 
         console.error("PDF generation error:", err);
         toast({
@@ -400,3 +396,5 @@ export default function TemplateEditorPage() {
     </div>
   );
 }
+
+    
