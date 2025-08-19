@@ -115,8 +115,8 @@ export default function TemplateEditorPage() {
         // Add banner to the footer
         const footerPartnersP = Array.from(doc.querySelectorAll('p')).find(p => p.textContent?.trim() === 'Partneři');
         if (footerPartnersP) {
-            const footerTable = footerPartnersP.closest('table.footer-wrap');
-            if (footerTable) {
+            const partnersRow = footerPartnersP.closest('tr');
+            if (partnersRow) {
                 const bannerRow = doc.createElement('tr');
                 const bannerTd = doc.createElement('td');
                 const bannerImg = doc.createElement('img');
@@ -127,12 +127,11 @@ export default function TemplateEditorPage() {
                 bannerImg.style.height = 'auto';
                 bannerImg.style.display = 'block';
                 bannerImg.style.paddingTop = '10px';
-
+                
                 bannerTd.appendChild(bannerImg);
                 bannerRow.appendChild(bannerTd);
 
-                // Insert banner into the main footer table body
-                footerTable.querySelector('tbody')?.appendChild(bannerRow);
+                partnersRow.after(bannerRow);
             }
         }
         
