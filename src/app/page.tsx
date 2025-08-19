@@ -10,7 +10,6 @@ import Papa from 'papaparse';
 import { TemplatePreview } from '@/components/template-preview';
 import { useToast } from "@/hooks/use-toast"
 import { Switch } from '@/components/ui/switch';
-import html2canvas from 'html2canvas';
 
 export default function TemplateEditorPage() {
   const { toast } = useToast();
@@ -29,7 +28,6 @@ export default function TemplateEditorPage() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [isDownloadingPng, setIsDownloadingPng] = useState(false);
 
   const csvInputRef = useRef<HTMLInputElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -110,6 +108,25 @@ export default function TemplateEditorPage() {
                     } else {
                         (partnerRow as HTMLElement).style.display = 'none';
                     }
+
+                    // Add new banner
+                    const bannerRow = doc.createElement('tr');
+                    const bannerTd = doc.createElement('td');
+                    bannerTd.className = 'wrapper';
+                    bannerTd.style.padding = '10px 20px 0 20px';
+                    
+                    const bannerImg = doc.createElement('img');
+                    bannerImg.src = 'https://blog.tycko.cz/wp-content/uploads/2025/08/Sablona-APP-BANNER-1.png';
+                    bannerImg.alt = 'Banner';
+                    bannerImg.style.width = '100%';
+                    bannerImg.style.height = 'auto';
+                    bannerImg.style.display = 'block';
+
+                    bannerTd.appendChild(bannerImg);
+                    bannerRow.appendChild(bannerTd);
+
+                    // Insert after the partner row
+                    partnerRow.parentNode?.insertBefore(bannerRow, partnerRow.nextSibling);
                 }
             }
         }
@@ -147,13 +164,30 @@ export default function TemplateEditorPage() {
             });
           }
         }
+
+        // --- A4 Width and Padding Removal ---
+        // Find the main content table
+        const bodyTable = doc.querySelector('table.body');
+        if (bodyTable) {
+            bodyTable.setAttribute('width', '100%'); 
+            
+            // Find and remove the spacer cells
+            const spacerCells = Array.from(bodyTable.querySelectorAll('td.container')).map(el => el.parentElement?.querySelector('td.wrapper > table > tbody > tr > td[height="40"]')).filter(Boolean);
+            spacerCells.forEach(cell => cell?.parentElement?.removeChild(cell));
+            
+            const mainContentTable = bodyTable.querySelector('td.wrapper > table');
+            if(mainContentTable){
+                 mainContentTable.setAttribute('width', '100%');
+            }
+        }
+         // --- End of A4 adjustment ---
         
         const serializer = new XMLSerializer();
         let newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(doc.documentElement);
 
         // Competitions - Replace text directly in the serialized HTML
-        newHtml = newHtml.replace('6 - Longest drive samostatná', longestDriveText);
-        newHtml = newHtml.replace('8 - Nearest to pin společná', nearestToPinText);
+        newHtml = newHtml.replace('>6 - Longest drive samostatná<', `>${longestDriveText}<`);
+        newHtml = newHtml.replace('>8 - Nearest to pin společná<', `>${nearestToPinText}<`);
         
         setModifiedHtml(newHtml);
     } catch (error) {
@@ -211,84 +245,6 @@ export default function TemplateEditorPage() {
         title: "Staženo",
         description: "Šablona byla úspěšně stažena.",
       });
-  };
-
-  const handleDownloadPng = async () => {
-    if (!iframeRef.current?.contentWindow?.document.body) {
-        toast({
-            variant: "destructive",
-            title: "Chyba",
-            description: "Náhled šablony není připraven.",
-        });
-        return;
-    }
-
-    setIsDownloadingPng(true);
-
-    try {
-        const iframeDoc = iframeRef.current.contentWindow.document;
-        const iframeBody = iframeDoc.body;
-        
-        const originalSrcs = new Map<HTMLImageElement, string>();
-        const images = Array.from(iframeDoc.querySelectorAll('img'));
-
-        images.forEach(img => {
-            if (img.src) {
-                originalSrcs.set(img, img.src);
-                img.src = `/api/proxy?url=${encodeURIComponent(img.src)}`;
-            }
-        });
-
-        // Wait a bit for proxied images to load
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        const canvas = await html2canvas(iframeBody, {
-            width: iframeBody.scrollWidth,
-            height: iframeBody.scrollHeight,
-            scale: 2, 
-            useCORS: true, 
-        });
-
-        // Restore original image sources
-        originalSrcs.forEach((src, img) => {
-            img.src = src;
-        });
-
-        const a4Width = 794; 
-        const a4Canvas = document.createElement('canvas');
-        a4Canvas.width = a4Width;
-        const aspectRatio = canvas.height / canvas.width;
-        a4Canvas.height = a4Width * aspectRatio;
-
-        const ctx = a4Canvas.getContext('2d');
-        if (ctx) {
-            ctx.drawImage(canvas, 0, 0, a4Canvas.width, a4Canvas.height);
-        }
-        
-        const dataUrl = a4Canvas.toDataURL('image/png');
-
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = 'startovni-listina-A4.png';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-
-        toast({
-            title: "Staženo",
-            description: "PNG soubor byl úspěšně stažen.",
-        });
-
-    } catch (error) {
-        console.error("Error generating PNG:", error);
-        toast({
-            variant: "destructive",
-            title: "Chyba při generování PNG",
-            description: "Nepodařilo se vygenerovat obrázek.",
-        });
-    } finally {
-        setIsDownloadingPng(false);
-    }
   };
 
   return (
@@ -382,10 +338,6 @@ export default function TemplateEditorPage() {
             <Button onClick={handleDownload} size="lg" className="w-full font-bold" disabled={isProcessing || !modifiedHtml}>
                 {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                 Stáhnout HTML
-            </Button>
-            <Button onClick={handleDownloadPng} size="lg" className="w-full font-bold" disabled={isProcessing || !modifiedHtml || isDownloadingPng}>
-                {isDownloadingPng ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ImageIcon className="mr-2 h-4 w-4" />}
-                Stáhnout PNG (A4)
             </Button>
           </div>
         </aside>
