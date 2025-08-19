@@ -112,11 +112,14 @@ export default function TemplateEditorPage() {
             }
         }
         
-        // Add banner to the footer
-        const footerPartnersP = Array.from(doc.querySelectorAll('p')).find(p => p.textContent?.trim() === 'Partneři');
-        if (footerPartnersP) {
-            const partnersRow = footerPartnersP.closest('tr');
-            if (partnersRow) {
+        // Add banner under "Těšíme se na Vás"
+        const tesimeSeElement = Array.from(doc.querySelectorAll('p, td, span')).find(
+            (el) => el.textContent?.trim().includes('Těšíme se na Vás')
+        );
+
+        if (tesimeSeElement) {
+            const parentRow = tesimeSeElement.closest('tr');
+            if (parentRow) {
                 const bannerRow = doc.createElement('tr');
                 const bannerTd = doc.createElement('td');
                 const bannerImg = doc.createElement('img');
@@ -131,7 +134,7 @@ export default function TemplateEditorPage() {
                 bannerTd.appendChild(bannerImg);
                 bannerRow.appendChild(bannerTd);
 
-                partnersRow.after(bannerRow);
+                parentRow.after(bannerRow);
             }
         }
         
