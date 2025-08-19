@@ -108,26 +108,31 @@ export default function TemplateEditorPage() {
                     } else {
                         (partnerRow as HTMLElement).style.display = 'none';
                     }
-
-                    // Add new banner
-                    const bannerRow = doc.createElement('tr');
-                    const bannerTd = doc.createElement('td');
-                    bannerTd.className = 'wrapper';
-                    bannerTd.style.padding = '10px 20px 0 20px';
-                    
-                    const bannerImg = doc.createElement('img');
-                    bannerImg.src = 'https://blog.tycko.cz/wp-content/uploads/2025/08/Sablona-APP-BANNER-1.png';
-                    bannerImg.alt = 'Banner';
-                    bannerImg.style.width = '100%';
-                    bannerImg.style.height = 'auto';
-                    bannerImg.style.display = 'block';
-
-                    bannerTd.appendChild(bannerImg);
-                    bannerRow.appendChild(bannerTd);
-
-                    // Insert after the partner row
-                    partnerRow.parentNode?.insertBefore(bannerRow, partnerRow.nextSibling);
                 }
+            }
+        }
+        
+        // Add banner to the footer
+        const footerPartnersP = Array.from(doc.querySelectorAll('p')).find(p => p.textContent?.trim() === 'Partneři');
+        if (footerPartnersP) {
+            const footerTable = footerPartnersP.closest('table.footer-wrap');
+            if (footerTable) {
+                const bannerRow = doc.createElement('tr');
+                const bannerTd = doc.createElement('td');
+                const bannerImg = doc.createElement('img');
+
+                bannerImg.src = 'https://blog.tycko.cz/wp-content/uploads/2025/08/Sablona-APP-BANNER-1.png';
+                bannerImg.alt = 'Banner';
+                bannerImg.style.width = '100%';
+                bannerImg.style.height = 'auto';
+                bannerImg.style.display = 'block';
+                bannerImg.style.paddingTop = '10px';
+
+                bannerTd.appendChild(bannerImg);
+                bannerRow.appendChild(bannerTd);
+
+                // Insert banner into the main footer table body
+                footerTable.querySelector('tbody')?.appendChild(bannerRow);
             }
         }
         
@@ -164,23 +169,6 @@ export default function TemplateEditorPage() {
             });
           }
         }
-
-        // --- A4 Width and Padding Removal ---
-        // Find the main content table
-        const bodyTable = doc.querySelector('table.body');
-        if (bodyTable) {
-            bodyTable.setAttribute('width', '100%'); 
-            
-            // Find and remove the spacer cells
-            const spacerCells = Array.from(bodyTable.querySelectorAll('td.container')).map(el => el.parentElement?.querySelector('td.wrapper > table > tbody > tr > td[height="40"]')).filter(Boolean);
-            spacerCells.forEach(cell => cell?.parentElement?.removeChild(cell));
-            
-            const mainContentTable = bodyTable.querySelector('td.wrapper > table');
-            if(mainContentTable){
-                 mainContentTable.setAttribute('width', '100%');
-            }
-        }
-         // --- End of A4 adjustment ---
         
         const serializer = new XMLSerializer();
         let newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(doc.documentElement);
