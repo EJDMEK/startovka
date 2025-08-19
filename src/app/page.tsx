@@ -113,11 +113,12 @@ export default function TemplateEditorPage() {
         }
         
         // Start List Data
-        if (startListData) {
-            const thElements = Array.from(doc.querySelectorAll('th'));
-            const timeHeader = thElements.find(th => th.textContent?.trim() === 'Čas');
-            const table = timeHeader?.closest('table');
-            const tbody = table?.querySelector('tbody');
+        const thElements = Array.from(doc.querySelectorAll('th'));
+        const timeHeader = thElements.find(th => th.textContent?.trim() === 'Čas');
+        const table = timeHeader?.closest('table');
+
+        if (startListData && table) {
+            const tbody = table.querySelector('tbody');
 
           if (tbody) {
             tbody.innerHTML = '';
@@ -146,6 +147,38 @@ export default function TemplateEditorPage() {
           }
         }
         
+        // Add banner below the start list table
+        if (table && table.parentNode) {
+            const bannerContainer = doc.createElement('table');
+            bannerContainer.setAttribute('width', '100%');
+            bannerContainer.setAttribute('cellspacing', '0');
+            bannerContainer.setAttribute('cellpadding', '0');
+            bannerContainer.setAttribute('border', '0');
+            bannerContainer.style.marginTop = '20px';
+            
+            const bannerRow = doc.createElement('tr');
+            const bannerCell = doc.createElement('td');
+            bannerCell.setAttribute('align', 'center');
+            
+            const bannerImage = doc.createElement('img');
+            bannerImage.setAttribute('src', 'https://blog.tycko.cz/wp-content/uploads/2025/08/Sablona-APP-BANNER-1.png');
+            bannerImage.setAttribute('alt', 'Banner');
+            bannerImage.setAttribute('width', '600');
+            bannerImage.style.maxWidth = '100%';
+            bannerImage.style.height = 'auto';
+            bannerImage.style.display = 'block';
+            
+            bannerCell.appendChild(bannerImage);
+            bannerRow.appendChild(bannerCell);
+            bannerContainer.appendChild(bannerRow);
+
+            // Insert after the table by inserting before the table's next sibling in the parent
+            const tableContainer = table.closest('td');
+            if(tableContainer) {
+              tableContainer.appendChild(bannerContainer)
+            }
+        }
+
         const serializer = new XMLSerializer();
         let newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(doc.documentElement);
 
