@@ -112,32 +112,6 @@ export default function TemplateEditorPage() {
             }
         }
         
-        // Add banner under "Těšíme se na Vás"
-        const tesimeSeElement = Array.from(doc.querySelectorAll('p, td, span')).find(
-            (el) => el.textContent?.trim().includes('Těšíme se na Vás')
-        );
-
-        if (tesimeSeElement) {
-            const parentRow = tesimeSeElement.closest('tr');
-            if (parentRow) {
-                const bannerRow = doc.createElement('tr');
-                const bannerTd = doc.createElement('td');
-                const bannerImg = doc.createElement('img');
-
-                bannerImg.src = 'https://blog.tycko.cz/wp-content/uploads/2025/08/Sablona-APP-BANNER-1.png';
-                bannerImg.alt = 'Banner';
-                bannerImg.style.width = '100%';
-                bannerImg.style.height = 'auto';
-                bannerImg.style.display = 'block';
-                bannerImg.style.paddingTop = '10px';
-                
-                bannerTd.appendChild(bannerImg);
-                bannerRow.appendChild(bannerTd);
-
-                parentRow.after(bannerRow);
-            }
-        }
-        
         // Start List Data
         if (startListData) {
             const thElements = Array.from(doc.querySelectorAll('th'));
