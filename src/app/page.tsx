@@ -159,6 +159,10 @@ export default function TemplateEditorPage() {
             const bannerRow = doc.createElement('tr');
             const bannerCell = doc.createElement('td');
             bannerCell.setAttribute('align', 'center');
+
+            const bannerLink = doc.createElement('a');
+            bannerLink.setAttribute('href', 'https://www.golfove-cesty.cz/vyhledane-golfove-zajezdy/constance-lemuria-tydenni-pobyt/?utm_source=tycko&utm_medium=web&utm_campaign=partner_program&utm_content=golf_cesty');
+            bannerLink.setAttribute('target', '_blank');
             
             const bannerImage = doc.createElement('img');
             bannerImage.setAttribute('src', 'https://blog.tycko.cz/wp-content/uploads/2025/08/Sablona-APP-BANNER-1.png');
@@ -167,8 +171,9 @@ export default function TemplateEditorPage() {
             bannerImage.style.maxWidth = '100%';
             bannerImage.style.height = 'auto';
             bannerImage.style.display = 'block';
-            
-            bannerCell.appendChild(bannerImage);
+
+            bannerLink.appendChild(bannerImage);
+            bannerCell.appendChild(bannerLink);
             bannerRow.appendChild(bannerCell);
             bannerContainer.appendChild(bannerRow);
 
@@ -346,3 +351,5 @@ export default function TemplateEditorPage() {
     </div>
   );
 }
+
+    
