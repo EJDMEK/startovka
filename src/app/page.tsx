@@ -5,11 +5,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, Download, Loader2, CaseSensitive, Link as LinkIcon, FileText, CheckCircle2, Image as ImageIcon, Trophy } from 'lucide-react';
+import { Upload, Download, Loader2, CaseSensitive, Link as LinkIcon, FileText, CheckCircle2, Image as ImageIcon, Trophy, PlusCircle } from 'lucide-react';
 import Papa from 'papaparse';
 import { TemplatePreview } from '@/components/template-preview';
 import { useToast } from "@/hooks/use-toast"
 import { Switch } from '@/components/ui/switch';
+
+interface Partner {
+  logoUrl: string;
+  linkUrl: string;
+}
 
 export default function TemplateEditorPage() {
   const { toast } = useToast();
@@ -25,6 +30,10 @@ export default function TemplateEditorPage() {
   
   const [longestDriveText, setLongestDriveText] = useState('6 - Longest drive samostatná');
   const [nearestToPinText, setNearestToPinText] = useState('8 - Nearest to pin společná');
+
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [newPartnerLogo, setNewPartnerLogo] = useState('');
+  const [newPartnerLink, setNewPartnerLink] = useState('');
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -73,10 +82,10 @@ export default function TemplateEditorPage() {
           tournamentImage.setAttribute('src', tournamentImageUrl);
         }
         
-        // Partner Section
-        const partnerP = Array.from(doc.querySelectorAll('p')).find(p => p.textContent?.trim() === 'Partner turnaje');
-        if (partnerP) {
-            const partnerSectionTd = partnerP.closest('td[align="center"]');
+        // Main Partner Section (Top)
+        const mainPartnerSectionP = Array.from(doc.querySelectorAll('p')).find(p => p.textContent?.trim() === 'Partner turnaje');
+        if (mainPartnerSectionP) {
+            const partnerSectionTd = mainPartnerSectionP.closest('td[align="center"]');
             if (partnerSectionTd) {
                 if (showPartnerSection) {
                     (partnerSectionTd as HTMLElement).style.display = '';
@@ -116,6 +125,48 @@ export default function TemplateEditorPage() {
             }
         }
         
+        // Add new partners to grid
+        const partnerGrid = doc.querySelector('#partner-grid');
+        if (partnerGrid) {
+            const partnerSlots = Array.from(partnerGrid.querySelectorAll('td[id^="partner-slot-"]'));
+            
+            partners.forEach((partner, index) => {
+                const slotIndex = 12 + index; // Start from the first empty slot after existing ones
+                let targetSlot = doc.getElementById(`partner-slot-${slotIndex + 1}`);
+
+                if (!targetSlot) {
+                    let lastRow = partnerGrid.querySelector('tr:last-child');
+                    if (!lastRow || lastRow.cells.length >= 3) {
+                        lastRow = doc.createElement('tr');
+                        partnerGrid.appendChild(lastRow);
+                    }
+                     while (lastRow.cells.length < 3) {
+                        const newCell = doc.createElement('td');
+                        newCell.setAttribute('width', '33.33%');
+                        newCell.setAttribute('align', 'center');
+                        newCell.style.padding = '10px';
+                        newCell.style.verticalAlign = 'top';
+                        newCell.id = `partner-slot-${partnerSlots.length + partners.indexOf(partner) + 1}`;
+                        lastRow.appendChild(newCell);
+                        if(lastRow.cells.length === 1 && !targetSlot) {
+                            targetSlot = newCell;
+                        }
+                     }
+                }
+                
+                if (targetSlot) {
+                    targetSlot.innerHTML = `
+                        <div style="background-color:#F9F7F0; border:1px solid #D1E0DB; border-radius:12px; padding:15px; display:table-cell; min-width:180px; height:60px; text-align:center; vertical-align:middle;">
+                            <a href="${partner.linkUrl}" target="_blank" style="display:block;">
+                                <img src="${partner.logoUrl}" alt="Partner Logo" style="max-width:170px; max-height:50px; width:auto; height:auto; display:block; margin:0 auto;" />
+                            </a>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+
         // Start List Data
         const thElements = Array.from(doc.querySelectorAll('th'));
         const timeHeader = thElements.find(th => th.textContent?.trim() === 'Čas');
@@ -169,7 +220,7 @@ export default function TemplateEditorPage() {
     } finally {
         setIsProcessing(false);
     }
-  }, [originalHtml, startListData, mainHeading, tournamentImageUrl, partnerLogoUrl, showPartnerSection, partnerLinkUrl, longestDriveText, nearestToPinText, toast]);
+  }, [originalHtml, startListData, mainHeading, tournamentImageUrl, partnerLogoUrl, showPartnerSection, partnerLinkUrl, longestDriveText, nearestToPinText, partners, toast]);
   
   useEffect(() => {
     updateTemplate();
@@ -198,6 +249,24 @@ export default function TemplateEditorPage() {
         skipEmptyLines: true,
       });
     }
+  };
+
+  const handleAddPartner = () => {
+    if (!newPartnerLogo || !newPartnerLink) {
+        toast({
+            variant: "destructive",
+            title: "Chybějící údaje",
+            description: "Prosím, zadejte URL loga i odkazu partnera.",
+        });
+        return;
+    }
+    setPartners([...partners, { logoUrl: newPartnerLogo, linkUrl: newPartnerLink }]);
+    setNewPartnerLogo('');
+    setNewPartnerLink('');
+    toast({
+        title: "Partner přidán",
+        description: "Nový partner byl úspěšně přidán do mřížky.",
+    });
   };
 
   const handleDownload = () => {
@@ -248,8 +317,8 @@ export default function TemplateEditorPage() {
             <CardHeader>
                 <div className="flex justify-between items-start">
                     <div>
-                        <CardTitle className="flex items-center gap-2"><LinkIcon className="text-primary"/>Sekce partnera</CardTitle>
-                        <CardDescription>Upravte nebo skryjte sekci partnera.</CardDescription>
+                        <CardTitle className="flex items-center gap-2"><LinkIcon className="text-primary"/>Sekce partnera (hlavní)</CardTitle>
+                        <CardDescription>Upravte nebo skryjte hlavního partnera.</CardDescription>
                     </div>
                     <Switch
                         checked={showPartnerSection}
@@ -271,6 +340,27 @@ export default function TemplateEditorPage() {
                 </CardContent>
             )}
           </Card>
+          
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><PlusCircle className="text-primary"/>Přidat partnera do mřížky</CardTitle>
+              <CardDescription>Vložte loga dalších partnerů.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="new-partner-logo">URL loga partnera</Label>
+                <Input id="new-partner-logo" type="url" placeholder="https://..." value={newPartnerLogo} onChange={(e) => setNewPartnerLogo(e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="new-partner-link">URL odkazu partnera</Label>
+                <Input id="new-partner-link" type="url" placeholder="https://..." value={newPartnerLink} onChange={(e) => setNewPartnerLink(e.target.value)} />
+              </div>
+              <Button onClick={handleAddPartner} className="w-full">
+                <PlusCircle className="mr-2 h-4 w-4" /> Přidat partnera
+              </Button>
+            </CardContent>
+          </Card>
+
 
           <Card className="shadow-md">
             <CardHeader>
