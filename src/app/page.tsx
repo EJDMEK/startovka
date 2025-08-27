@@ -35,15 +35,20 @@ export default function TemplateEditorPage() {
 
   useEffect(() => {
     fetch('/template.html')
-      .then(response => response.text())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.text();
+      })
       .then(data => {
         setOriginalHtml(data);
       }).catch(error => {
         console.error("Failed to fetch template:", error);
         toast({
           variant: "destructive",
-          title: "Chyba",
-          description: "Nepodařilo se načíst základní šablonu.",
+          title: "Chyba při načítání šablony",
+          description: "Nepodařilo se načíst soubor template.html z adresáře /public.",
         });
       });
   }, [toast]);
@@ -73,41 +78,40 @@ export default function TemplateEditorPage() {
         if (partnerP) {
             const partnerSectionTd = partnerP.closest('td[align="center"]');
             if (partnerSectionTd) {
-                const partnerRow = partnerSectionTd.parentElement;
-                if (partnerRow) {
-                    if (showPartnerSection) {
-                        (partnerRow as HTMLElement).style.display = '';
-                        const partnerLogoImg = partnerRow.querySelector('img[alt="Partner Logo"]');
-                        if (partnerLogoUrl && partnerLogoImg) {
-                            partnerLogoImg.setAttribute('src', partnerLogoUrl);
+                if (showPartnerSection) {
+                    (partnerSectionTd as HTMLElement).style.display = '';
+                    const partnerLogoImg = partnerSectionTd.querySelector('img[alt="Partner Logo"]');
+                    if (partnerLogoUrl && partnerLogoImg) {
+                        partnerLogoImg.setAttribute('src', partnerLogoUrl);
 
-                            let link = partnerLogoImg.parentElement;
-                            while(link && link.tagName.toLowerCase() !== 'a' && link.parentElement) {
-                                link = link.parentElement;
-                            }
-                            if (link && link.tagName.toLowerCase() !== 'a') {
-                                link = null;
-                            }
+                        let link = partnerLogoImg.parentElement;
+                        while(link && link.tagName.toLowerCase() !== 'a' && link.parentElement) {
+                            link = link.parentElement;
+                        }
+                        if (link && link.tagName.toLowerCase() !== 'a') {
+                            link = null;
+                        }
 
-                            if (partnerLinkUrl) {
-                                if (link) {
-                                    link.setAttribute('href', partnerLinkUrl);
-                                } else {
-                                    const newLink = doc.createElement('a');
-                                    newLink.setAttribute('href', partnerLinkUrl);
-                                    newLink.setAttribute('target', '_blank');
-                                    partnerLogoImg.replaceWith(newLink);
-                                    newLink.appendChild(partnerLogoImg);
-                                }
+                        if (partnerLinkUrl) {
+                            if (link) {
+                                link.setAttribute('href', partnerLinkUrl);
                             } else {
-                                if (link && link.parentElement) {
-                                    link.parentElement.replaceChild(partnerLogoImg, link);
+                                const newLink = doc.createElement('a');
+                                newLink.setAttribute('href', partnerLinkUrl);
+                                newLink.setAttribute('target', '_blank');
+                                if (partnerLogoImg.parentNode) {
+                                  partnerLogoImg.parentNode.replaceChild(newLink, partnerLogoImg);
+                                  newLink.appendChild(partnerLogoImg);
                                 }
+                            }
+                        } else {
+                            if (link && link.parentElement) {
+                                link.parentElement.replaceChild(partnerLogoImg, link);
                             }
                         }
-                    } else {
-                        (partnerRow as HTMLElement).style.display = 'none';
                     }
+                } else {
+                    (partnerSectionTd as HTMLElement).style.display = 'none';
                 }
             }
         }
@@ -147,43 +151,6 @@ export default function TemplateEditorPage() {
           }
         }
         
-        // Add banner below the start list table
-        if (table && table.parentNode) {
-            const bannerContainer = doc.createElement('table');
-            bannerContainer.setAttribute('width', '100%');
-            bannerContainer.setAttribute('cellspacing', '0');
-            bannerContainer.setAttribute('cellpadding', '0');
-            bannerContainer.setAttribute('border', '0');
-            bannerContainer.style.marginTop = '20px';
-            
-            const bannerRow = doc.createElement('tr');
-            const bannerCell = doc.createElement('td');
-            bannerCell.setAttribute('align', 'center');
-
-            const bannerLink = doc.createElement('a');
-            bannerLink.setAttribute('href', 'https://www.golfove-cesty.cz/vyhledane-golfove-zajezdy/constance-lemuria-tydenni-pobyt/?utm_source=tycko&utm_medium=web&utm_campaign=partner_program&utm_content=golf_cesty');
-            bannerLink.setAttribute('target', '_blank');
-            
-            const bannerImage = doc.createElement('img');
-            bannerImage.setAttribute('src', 'https://blog.tycko.cz/wp-content/uploads/2025/08/Sablona-APP-BANNER-1.png');
-            bannerImage.setAttribute('alt', 'Banner');
-            bannerImage.setAttribute('width', '600');
-            bannerImage.style.maxWidth = '100%';
-            bannerImage.style.height = 'auto';
-            bannerImage.style.display = 'block';
-
-            bannerLink.appendChild(bannerImage);
-            bannerCell.appendChild(bannerLink);
-            bannerRow.appendChild(bannerCell);
-            bannerContainer.appendChild(bannerRow);
-
-            // Insert after the table by inserting before the table's next sibling in the parent
-            const tableContainer = table.closest('td');
-            if(tableContainer) {
-              tableContainer.appendChild(bannerContainer)
-            }
-        }
-
         const serializer = new XMLSerializer();
         let newHtml = '<!DOCTYPE html>\n' + serializer.serializeToString(doc.documentElement);
 
@@ -351,5 +318,3 @@ export default function TemplateEditorPage() {
     </div>
   );
 }
-
-    
